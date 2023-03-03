@@ -2,7 +2,6 @@ mod config;
 mod task;
 use clap::Parser;
 use config::StagedTask;
-use task::stream_command;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true))]
@@ -34,7 +33,7 @@ fn main() {
         selected_command: selected_command,
         command_inputs: args.task_args,
     };
-    let _ = stream_command(staged);
+    let _ = staged.stream_command();
 }
 
 fn show_help_statement(config: &config::Config) {
