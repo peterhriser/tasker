@@ -1,27 +1,8 @@
 mod config;
-use crate::config::{parse_command_from_string, StagedTask};
+mod task;
 use clap::Parser;
-use std::io::{BufRead, BufReader, Error,ErrorKind, stdout, Write};
-use std::process::Stdio;
-
-pub fn stream_command(staged_task: StagedTask) -> Result<(), Error> {
-    let cmd = parse_command_from_string(staged_task.create_command_string())
-        .unwrap()
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?
-        .stdout
-        .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))?;
-
-    let reader = BufReader::new(cmd);
-
-    reader
-        .lines()
-        .for_each(|line| {stdout().flush().unwrap(); println!("{}", line.unwrap())});
-
-    println!("Completed Task!");
-    Ok(())
-}
+use config::StagedTask;
+use task::stream_command;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true))]
@@ -44,7 +25,10 @@ fn main() {
     let config: config::Config = load_task_file(args.config).unwrap();
     let selected_command = match config.get_task_from_name(&args.command) {
         Some(tsk) => tsk,
-        None => {show_help_statement(&config); std::process::exit(1)},
+        None => {
+            show_help_statement(&config);
+            std::process::exit(1)
+        }
     };
     let staged: StagedTask = StagedTask {
         selected_command: selected_command,

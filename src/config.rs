@@ -146,14 +146,18 @@ impl StagedTask<'_> {
         }
         return parameter_to_value_map;
     }
-}
+    pub fn parse_command_from_string(&self, command_str: String) -> Result<Command, io::Error> {
+        let mut parts = command_str.split_whitespace();
+        let command_name = parts.next().expect("no command specified");
+        let args = parts;
 
-pub fn parse_command_from_string(command_str: String) -> Result<Command, io::Error> {
-    let mut parts = command_str.split_whitespace();
-    let command_name = parts.next().expect("no command specified");
-    let args = parts;
+        let mut cmd = Command::new(command_name);
+        cmd.args(args);
+        Ok(cmd)
+    }
 
-    let mut cmd = Command::new(command_name);
-    cmd.args(args);
-    Ok(cmd)
+    pub fn generate_command_with_args(&self) -> Result<Command, io::Error> {
+        let cmd_string = self.create_command_string();
+        self.parse_command_from_string(cmd_string)
+    }
 }
