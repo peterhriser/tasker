@@ -178,7 +178,7 @@ impl Config {
             task_vector.push(new_command);
         }
         let base_command = clap::Command::new("tasker")
-            .about("about")
+            .about("tasker runs tasks defined by the taskfile defined in root")
             .arg_required_else_help(true)
             .subcommands(task_vector);
         return base_command;

@@ -1,5 +1,4 @@
 mod config;
-mod task;
 use clap::Parser;
 use config::Config;
 
@@ -14,9 +13,6 @@ struct Args {
 }
 
 fn main() {
-    // let args = Args::parse();
-    // let mut cmd = Args::command();
-    // cmd.print_help();
     let config = Config::new("config.yaml".to_string()).unwrap();
     let cmd = config.create_clap_command();
     let inputs = cmd.get_matches();
@@ -27,21 +23,4 @@ fn main() {
     let subcmd_inputs = subcmd_struct.to_owned();
     let _ = chosen_command.stream_command(subcmd_inputs);
 
-    // let staged: StagedTask = StagedTask {
-    //     selected_command: chosen_command,
-    //     command_inputs: inputs.get_raw(id)
-    // };
-    // println!("{:?}", x)
-    // let selected_command = match config.get_task_by_name(&args.command) {
-    //     Some(tsk) => tsk,
-    //     None => {
-    //         &config.show_help_statement();
-    //         std::process::exit(1)
-    //     }
-    // };
-    // let staged: StagedTask = StagedTask {
-    //     selected_command: selected_command,
-    //     command_inputs: args.task_args,
-    // };
-    // let _ = staged.stream_command();
 }
