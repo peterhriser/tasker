@@ -1,0 +1,27 @@
+project: "Example"
+version: "1.0"
+author: "Peter"
+
+globals:
+  environment: staging
+  aws_profile: networking-staging
+
+commands:
+  hello:
+    cmd: echo hello ${name} ${last_name}
+    description: "greets a user"
+    args:
+        # assume any non flagged input is an ordered arg
+      - name: name
+        type: string
+      - name: last_name
+        type: string
+        default: "the First"
+  tail-log:
+    cmd: tail -f /var/log/${log_name}
+    description: "tails a log in /var/log/"
+    args:
+        # assume any non flagged input is an ordered arg
+      - name: log_name
+        type: string
+        default: syslog
