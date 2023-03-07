@@ -1,3 +1,4 @@
+use clap::Arg;
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -166,7 +167,7 @@ impl Config {
         return self.commands.get(name);
     }
     pub fn new(file_path: String) -> Result<Config, std::io::Error> {
-        let file = std::fs::File::open(file_path).expect("Could not open file");
+        let file = std::fs::File::open(file_path).unwrap();
         let deserialized_config: Config =
             serde_yaml::from_reader(file).expect("Could not read values.");
         Ok(deserialized_config)
@@ -179,6 +180,8 @@ impl Config {
         }
         let base_command = clap::Command::new("tasker")
             .about("tasker runs tasks defined by the taskfile defined in root")
+            .color(clap::ColorChoice::Always)
+            .no_binary_name(true)
             .arg_required_else_help(true)
             .subcommands(task_vector);
         return base_command;
