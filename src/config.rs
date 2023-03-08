@@ -1,4 +1,3 @@
-use clap::Arg;
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
