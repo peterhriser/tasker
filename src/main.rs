@@ -1,7 +1,5 @@
 mod config;
-
 use std::{path::PathBuf, process::exit};
-
 use clap::{value_parser, CommandFactory, Parser};
 use config::Config;
 
