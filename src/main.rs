@@ -29,13 +29,11 @@ struct Args {
 fn main() {
     let initial_arg_matches = Args::command().get_matches();
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config") {
-        Some(fp) if fp.exists() => {
-            fp.to_str().unwrap().to_string()
-        }
+        Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
         Some(_) => {
-                println!("Error: No Taskfile found");
-                Args::command().print_help().unwrap();
-                exit(1)
+            println!("Error: No Taskfile found");
+            Args::command().print_help().unwrap();
+            exit(1)
         }
         None => {
             println!("Error: Not a valid filepath for Taskfile");
