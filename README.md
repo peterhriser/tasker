@@ -14,4 +14,6 @@
 # assumptions
 - assume args are ordered to start
 
-# how do I insert context into
+# things to check out
+did not plan this but there is an app that has "Taskfile"s and uses a fairly similar yaml format. Not trying to replicate but could be a good reference for features to add: https://taskfile.dev/api/
+example: namespacing
