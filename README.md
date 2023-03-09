@@ -10,6 +10,8 @@
 - support dependency management wrappers (integrate into poetry, venv)
 - command types to support: one line command, script,
 - support automatic build commands ex: detect Dockerfile exists, tasker build docker automatically works
-
+- runtime/environment contexts
 # assumptions
 - assume args are ordered to start
+
+# how do I insert context into

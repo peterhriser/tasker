@@ -1,7 +1,7 @@
 mod config;
-use std::{path::PathBuf, process::exit};
 use clap::{value_parser, CommandFactory, Parser};
 use config::Config;
+use std::{path::PathBuf, process::exit, result};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
@@ -17,6 +17,13 @@ struct Args {
         help = "commands defined by Taskfile"
     )]
     task_info: Vec<String>,
+
+    #[arg(
+        short = 'x',
+        long = "context",
+        help = "execution context to load for command"
+    )]
+    context: Option<String>,
 }
 
 fn main() {
@@ -38,7 +45,8 @@ fn main() {
         }
     };
     // clap will catch any missing or bad args
-    let config = Config::new(config_path).unwrap();
+    let task_context_name = initial_arg_matches.get_one::<String>("context");
+    let config = Config::new(config_path, task_context_name).unwrap();
     let command_to_run = config.create_clap_command();
 
     // we can be confident in unwraps since we verify most values above on load
@@ -46,10 +54,18 @@ fn main() {
         .get_many::<String>("task_info")
         .unwrap()
         .collect();
-    let inputs = command_to_run.get_matches_from(raw_args);
-    let subcmd = inputs.subcommand_name().unwrap();
-    let chosen_command = config.get_task_by_name(subcmd).unwrap();
-    let (_, subcmd_struct) = inputs.subcommand().unwrap();
-    let subcmd_inputs = subcmd_struct.to_owned();
-    let _ = chosen_command.stream_command(subcmd_inputs);
+
+    // get matches found so far and parse into subcommand
+    let cli_inputs = command_to_run.get_matches_from(raw_args);
+    let (subcommand_name, clap_matched_args) = cli_inputs.subcommand().unwrap();
+    let selected_task = config.get_task_by_name(subcommand_name).unwrap();
+    let task_context = config.get_context(task_context_name);
+    match selected_task.execute_command(clap_matched_args.to_owned(), task_context) {
+        Ok(_) => {
+            println!("Completed Task!");
+        }
+        Err(_) => {
+            println!("Task Failed")
+        }
+    };
 }
