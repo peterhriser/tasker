@@ -2,13 +2,13 @@ mod config;
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, CommandFactory, Parser};
 use std::path::PathBuf;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
-struct Args {
+struct CliArgs {
     #[arg(default_value = "Taskfile", short, long, help="file path to load tasks from", value_parser=value_parser!(PathBuf))]
     config: PathBuf,
 
-    // All trailing args are captured in vec to be parsed later
     #[arg(
         trailing_var_arg = true,
         allow_hyphen_values = true,
@@ -26,17 +26,17 @@ struct Args {
 }
 
 fn main() {
-    let initial_arg_matches = Args::command().get_matches();
+    let initial_arg_matches = CliArgs::command().get_matches();
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config") {
         Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
         Some(_) => {
             println!("Error: No Taskfile found");
-            Args::command().print_help().unwrap();
+            CliArgs::command().print_help().unwrap();
             std::process::exit(1)
         }
         None => {
             println!("Error: Not a valid filepath for Taskfile");
-            Args::command().print_help().unwrap();
+            CliArgs::command().print_help().unwrap();
             std::process::exit(1)
         }
     };
