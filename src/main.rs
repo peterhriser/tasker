@@ -1,8 +1,7 @@
 mod config;
+use crate::config::taskfile::Taskfile;
 use clap::{value_parser, CommandFactory, Parser};
-use config::Config;
-use std::{path::PathBuf, process::exit, result};
-
+use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
 struct Args {
@@ -33,17 +32,17 @@ fn main() {
         Some(_) => {
             println!("Error: No Taskfile found");
             Args::command().print_help().unwrap();
-            exit(1)
+            std::process::exit(1)
         }
         None => {
             println!("Error: Not a valid filepath for Taskfile");
             Args::command().print_help().unwrap();
-            exit(1)
+            std::process::exit(1)
         }
     };
     // clap will catch any missing or bad args
     let task_context_name = initial_arg_matches.get_one::<String>("context");
-    let config = Config::new(config_path, task_context_name).unwrap();
+    let config = Taskfile::new(config_path, task_context_name).unwrap();
     let command_to_run = config.create_clap_command();
 
     // we can be confident in unwraps since we verify most values above on load
