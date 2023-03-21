@@ -23,6 +23,16 @@ impl TaskStanza {
     pub(super) fn set_args(&mut self, args: Vec<CmdArg>) {
         self.command_args = args;
     }
+    pub(super) fn create_clap_subcommand(&self, name: String) -> clap::Command {
+        let mut arg_vector: Vec<clap::Arg> = vec![];
+        for arg in &self.command_args {
+            let new_arg = arg.get_clap_arg();
+            arg_vector.push(new_arg)
+        }
+        let about = self.description.to_owned().unwrap_or_default();
+        let base_command = clap::Command::new(name).about(about).args(arg_vector);
+        return base_command;
+    }
     fn create_arg_replace_hashmap(&self) -> HashMap<String, String> {
         let mut lookup_map: HashMap<String, String> = HashMap::new();
         for arg in &self.command_args {
@@ -34,17 +44,6 @@ impl TaskStanza {
         }
         return lookup_map;
     }
-    pub(super) fn create_clap_subcommand(&self, name: String) -> clap::Command {
-        let mut arg_vector: Vec<clap::Arg> = vec![];
-        for arg in &self.command_args {
-            let new_arg = arg.get_clap_arg();
-            arg_vector.push(new_arg)
-        }
-        let about = self.description.to_owned().unwrap_or_default();
-        let base_command = clap::Command::new(name).about(about).args(arg_vector);
-        return base_command;
-    }
-
     pub(super) fn create_command_string(
         &self,
         clap_inputs: ArgMatches,
@@ -152,15 +151,17 @@ pub mod taskstanza_test_helpers {
                     create_cmd_arg_for_test(true),
                     create_cmd_arg_for_test(false),
                 ],
-                description: Some("this has a required and optional arg".to_string()),
+                description: Some("this has a required only".to_string()),
             };
         }
     }
 }
 #[cfg(test)]
 mod tests {
+    use crate::config::{cmd::cmd_test_helpers::create_cmd_arg_for_test, taskstanza::TaskStanza};
+
     use super::taskstanza_test_helpers::create_task_stanza_for_tests;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, io};
 
     #[test]
     fn test_create_hashmap_of_args() {
@@ -178,11 +179,91 @@ mod tests {
     fn test_create_hashmap_extra_args() {
         let stanza = create_task_stanza_for_tests(false);
         let map = stanza.create_arg_replace_hashmap();
-        let expected_map: HashMap<String, String> = HashMap::from([
-            ("required_arg".to_string(), "${required_arg}".to_string()),
-        ]);
+        let expected_map: HashMap<String, String> =
+            HashMap::from([("required_arg".to_string(), "${required_arg}".to_string())]);
         for key in expected_map.keys() {
             assert_eq!(map.get(key), expected_map.get(key))
         }
+    }
+    #[test]
+    fn test_create_clap_command() {
+        let stanza = create_task_stanza_for_tests(true);
+        let clp_command = stanza.create_clap_subcommand("test".to_string());
+        let vec_command = clp_command.get_arguments().collect::<Vec<_>>();
+        for clp in vec_command {
+            if !clp.is_required_set() {
+                assert_eq!(clp.get_id().as_str(), "optional_arg")
+            } else if clp.is_required_set() {
+                assert_eq!(clp.get_id().as_str(), "required_arg")
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_command_from_string() {
+        let stanza = create_task_stanza_for_tests(true);
+        let cmd_string = stanza.parse_command_from_string("echo hello world".to_string());
+        let args = cmd_string.get_args().collect::<Vec<_>>();
+        let matches = vec!["hello", "world"];
+        for i in 0..args.len() {
+            let arg = args[i].to_str().unwrap();
+            assert_eq!(arg, matches[i])
+        }
+    }
+
+    #[test]
+    fn test_create_command_string() {
+        let stanza = create_task_stanza_for_tests(true);
+        let arg_matches = stanza
+            .create_clap_subcommand("test".to_string())
+            .get_matches_from(vec!["test", "hello", "world"]);
+        let cmd_string = stanza
+            .create_command_string(arg_matches, HashMap::from([]))
+            .unwrap();
+        assert_eq!("echo hello world".to_string(), cmd_string);
+    }
+
+    #[test]
+    fn test_generate_command_with_args() {
+        let stanza = create_task_stanza_for_tests(true);
+        let arg_matches = stanza
+            .create_clap_subcommand("test".to_string())
+            .get_matches_from(vec!["test", "hello", "world"]);
+        let cmd = stanza.generate_command_with_args(arg_matches, HashMap::from([]));
+        // samples from a above, essentially a union of previous 2 tests for integration
+        let args = cmd.unwrap();
+        let args = args.get_args().collect::<Vec<_>>();
+        let matches = vec!["hello", "world"];
+        for i in 0..args.len() {
+            let arg = args[i].to_str().unwrap();
+            assert_eq!(arg, matches[i])
+        }
+    }
+    #[test]
+    fn test_call_command() {
+        let stanza = create_task_stanza_for_tests(true);
+        let arg_matches = stanza
+            .create_clap_subcommand("test".to_string())
+            .get_matches_from(vec!["test", "hello", "world"]);
+        let cmd = stanza.call_command(arg_matches, HashMap::from([]));
+        // samples from a above, essentially a union of previous 2 tests for integration
+        let results = cmd.unwrap();
+        let reader = io::BufReader::new(results);
+
+        io::BufRead::lines(reader).for_each(|line| {
+            io::Write::flush(&mut io::stdout()).unwrap();
+            let test_string = line.unwrap();
+            assert!(!test_string.contains("test"));
+            assert!(test_string.contains("hello world"));
+        });
+    }
+    #[test]
+    fn test_execute_command() {
+        let stanza = create_task_stanza_for_tests(true);
+        let arg_matches = stanza
+            .create_clap_subcommand("test".to_string())
+            .get_matches_from(vec!["test", "hello", "world"]);
+        let cmd = stanza.execute_command(arg_matches, HashMap::from([]));
+        assert!(cmd.is_ok())
     }
 }
