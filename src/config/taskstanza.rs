@@ -13,27 +13,26 @@ use super::cmd::{ArgError, CmdArg};
 #[derive(Deserialize, Serialize, Clone)]
 pub struct TaskStanza {
     #[serde(rename(deserialize = "cmd"))]
-    pub command_template: String,
+    pub unparsed_command_raw: String,
     #[serde(rename(deserialize = "args"))]
     pub command_args: Vec<CmdArg>,
     pub description: Option<String>,
 }
 
 impl TaskStanza {
+    pub(super) fn set_args(&mut self, args: Vec<CmdArg>) {
+        self.command_args = args;
+    }
     fn create_arg_replace_hashmap(&self) -> HashMap<String, String> {
         let mut lookup_map: HashMap<String, String> = HashMap::new();
         for arg in &self.command_args {
             let search_term = format!("${{{arg_name}}}", arg_name = arg.name);
-            if self.command_template.contains(&search_term) {
+            if self.unparsed_command_raw.contains(&search_term) {
                 let found_term = arg.name.to_string();
                 lookup_map.insert(found_term, search_term);
             }
         }
         return lookup_map;
-    }
-
-    pub(super) fn set_args(&mut self, args: Vec<CmdArg>) {
-        self.command_args = args;
     }
     pub(super) fn create_clap_subcommand(&self, name: String) -> clap::Command {
         let mut arg_vector: Vec<clap::Arg> = vec![];
@@ -46,12 +45,12 @@ impl TaskStanza {
         return base_command;
     }
 
-    pub fn create_command_string(
+    pub(super) fn create_command_string(
         &self,
         clap_inputs: ArgMatches,
         context: HashMap<String, String>,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let mut cmd_raw = self.command_template.to_string();
+        let mut cmd_raw = self.unparsed_command_raw.to_string();
         let replacer_map = self.create_arg_replace_hashmap();
         for arg in &self.command_args {
             let replace_string = replacer_map.get(&arg.name).unwrap();
@@ -131,7 +130,59 @@ impl TaskStanza {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
-pub struct TaskContext {
-    pub vars: HashMap<String, String>,
+#[cfg(test)]
+pub mod taskstanza_test_helpers {
+    use super::TaskStanza;
+    use crate::config::cmd::cmd_test_helpers::create_cmd_arg_for_test;
+
+    pub fn create_task_stanza_for_tests(optional_arg: bool) -> TaskStanza {
+        if optional_arg {
+            return TaskStanza {
+                unparsed_command_raw: "echo ${required_arg} ${optional_arg}".to_string(),
+                command_args: vec![
+                    create_cmd_arg_for_test(true),
+                    create_cmd_arg_for_test(false),
+                ],
+                description: Some("this has a required and optional arg".to_string()),
+            };
+        } else {
+            return TaskStanza {
+                unparsed_command_raw: "echo ${required_arg}".to_string(),
+                command_args: vec![
+                    create_cmd_arg_for_test(true),
+                    create_cmd_arg_for_test(false),
+                ],
+                description: Some("this has a required and optional arg".to_string()),
+            };
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::taskstanza_test_helpers::create_task_stanza_for_tests;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_create_hashmap_of_args() {
+        let stanza = create_task_stanza_for_tests(true);
+        let map = stanza.create_arg_replace_hashmap();
+        let expected_map: HashMap<String, String> = HashMap::from([
+            ("required_arg".to_string(), "${required_arg}".to_string()),
+            ("optional_arg".to_string(), "${optional_arg}".to_string()),
+        ]);
+        for key in expected_map.keys() {
+            assert_eq!(map.get(key), expected_map.get(key))
+        }
+    }
+    #[test]
+    fn test_create_hashmap_extra_args() {
+        let stanza = create_task_stanza_for_tests(false);
+        let map = stanza.create_arg_replace_hashmap();
+        let expected_map: HashMap<String, String> = HashMap::from([
+            ("required_arg".to_string(), "${required_arg}".to_string()),
+        ]);
+        for key in expected_map.keys() {
+            assert_eq!(map.get(key), expected_map.get(key))
+        }
+    }
 }

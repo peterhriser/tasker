@@ -76,3 +76,58 @@ impl CmdArg {
         };
     }
 }
+
+#[cfg(test)]
+pub mod cmd_test_helpers {
+    use super::CmdArg;
+
+    pub fn create_cmd_arg_for_test(required: bool) -> CmdArg {
+        if required {
+            return CmdArg {
+                name: "required_arg".to_string(),
+                default: None,
+                arg_type: "string".to_string(),
+            };
+        } else {
+            return CmdArg {
+                name: "optional_arg".to_string(),
+                default: Some("DefaultValue".to_string()),
+                arg_type: "string".to_string(),
+            };
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::config::cmd::cmd_test_helpers::create_cmd_arg_for_test;
+
+    #[test]
+    fn test_is_required() {
+        let required_arg = create_cmd_arg_for_test(true);
+        assert!(required_arg.is_required());
+
+        let optional_arg = create_cmd_arg_for_test(false);
+        assert!(!optional_arg.is_required());
+    }
+    #[test]
+    fn test_set_new_default() {
+        let mut required_arg = create_cmd_arg_for_test(true);
+        assert!(required_arg.is_required());
+
+        // setting a default will make the arg no longer required
+        required_arg.set_default_from_option(Some("new_default".to_string()));
+        assert!(!required_arg.is_required());
+    }
+    #[test]
+    fn test_get_clap_arg_no_default() {
+        let required_arg = create_cmd_arg_for_test(true);
+        let clap_arg = required_arg.get_clap_arg();
+        assert!(clap_arg.is_required_set());
+    }
+    #[test]
+    fn test_get_clap_arg_with_default() {
+        let optional_arg = create_cmd_arg_for_test(false);
+        let clap_arg = optional_arg.get_clap_arg();
+        assert!(!clap_arg.is_required_set());
+    }
+}

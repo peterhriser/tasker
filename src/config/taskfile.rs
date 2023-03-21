@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::cmd::CmdArg;
-use super::tasks::{TaskContext, TaskStanza};
+use super::taskcontext::TaskContext;
+use super::taskstanza::TaskStanza;
 
 // Taskfile File made from assembling above structs
 #[derive(Deserialize, Serialize, Clone)]
