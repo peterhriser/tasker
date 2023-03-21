@@ -66,7 +66,10 @@ impl CmdArg {
             return clap::Arg::new(name_owned).required(true);
         }
     }
-    pub(super) fn set_default_from_option(&mut self, new_default: Option<String>) {
+    pub(super) fn set_default_from_option(
+        &mut self,
+        new_default: Option<String>,
+    ) -> Result<(), ()> {
         match new_default {
             Some(item) => {
                 let copied_val = item.to_string();
@@ -74,6 +77,7 @@ impl CmdArg {
             }
             None => {}
         };
+        return Ok(());
     }
 }
 
@@ -100,6 +104,8 @@ pub mod cmd_test_helpers {
 #[cfg(test)]
 mod tests {
     use crate::config::cmd::cmd_test_helpers::create_cmd_arg_for_test;
+
+    use super::{AllowedVarTypes, ArgError};
 
     #[test]
     fn test_is_required() {
@@ -129,5 +135,24 @@ mod tests {
         let optional_arg = create_cmd_arg_for_test(false);
         let clap_arg = optional_arg.get_clap_arg();
         assert!(!clap_arg.is_required_set());
+    }
+
+    #[test]
+    fn test_allowed_var_types() {
+        let s_type = AllowedVarTypes::S("Example".to_string());
+        let i_type = AllowedVarTypes::U(32);
+        let v_type = AllowedVarTypes::V(vec![AllowedVarTypes::S("Test".to_string()), AllowedVarTypes::S("Test".to_string())]);
+        assert_eq!("Example 32 [Test, Test]", format!("{s_type} {i_type} {v_type}"))
+    }
+    #[test]
+    fn test_arg_error() {
+        let var = "var_to_insert";
+        let e = ArgError {
+            message: format!("inserted_var: {var}"),
+        };
+
+        assert_eq!(e.message, "inserted_var: var_to_insert");
+        assert_eq!(format!("fmt {e}", e=e), "fmt Missing Value: inserted_var: var_to_insert");
+
     }
 }
