@@ -121,7 +121,7 @@ mod tests {
         assert!(required_arg.is_required());
 
         // setting a default will make the arg no longer required
-        required_arg.set_default_from_option(Some("new_default".to_string()));
+        required_arg.set_default_from_option(Some("new_default".to_string())).unwrap();
         assert!(!required_arg.is_required());
     }
     #[test]
