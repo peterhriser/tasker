@@ -34,7 +34,7 @@ impl Taskfile {
                     None => None,
                 };
                 let mut new_arg = arg.clone();
-                new_arg.set_default_from_option(new_default_parsed);
+                new_arg.set_default_from_option(new_default_parsed).unwrap();
                 new_command_args.push(new_arg);
             }
             new_task_stanza.set_args(new_command_args);
