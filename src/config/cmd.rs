@@ -1,5 +1,4 @@
-use serde::{Deserialize, Serialize};
-use std::fmt;
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub(super) struct ArgError {
@@ -14,35 +13,8 @@ impl std::fmt::Display for ArgError {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum AllowedVarTypes {
-    U(u64),
-    S(String),
-    V(Vec<AllowedVarTypes>),
-}
-
-impl fmt::Display for AllowedVarTypes {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            AllowedVarTypes::U(u) => write!(f, "{}", u),
-            AllowedVarTypes::S(s) => write!(f, "{}", s),
-            AllowedVarTypes::V(v) => {
-                write!(f, "[")?;
-                for (i, item) in v.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", item)?;
-                }
-                write!(f, "]")
-            }
-        }
-    }
-}
-
 // cmd arg stanzas
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct CmdArg {
     pub name: String,
     #[serde(default)]
@@ -103,9 +75,7 @@ pub mod cmd_test_helpers {
 }
 #[cfg(test)]
 mod tests {
-    use crate::config::cmd::cmd_test_helpers::create_cmd_arg_for_test;
-
-    use super::{AllowedVarTypes, ArgError};
+    use crate::config::cmd::{cmd_test_helpers::create_cmd_arg_for_test, ArgError};
 
     #[test]
     fn test_is_required() {
@@ -121,7 +91,9 @@ mod tests {
         assert!(required_arg.is_required());
 
         // setting a default will make the arg no longer required
-        required_arg.set_default_from_option(Some("new_default".to_string())).unwrap();
+        required_arg
+            .set_default_from_option(Some("new_default".to_string()))
+            .unwrap();
         assert!(!required_arg.is_required());
     }
     #[test]
@@ -138,13 +110,6 @@ mod tests {
     }
 
     #[test]
-    fn test_allowed_var_types() {
-        let s_type = AllowedVarTypes::S("Example".to_string());
-        let i_type = AllowedVarTypes::U(32);
-        let v_type = AllowedVarTypes::V(vec![AllowedVarTypes::S("Test".to_string()), AllowedVarTypes::S("Test".to_string())]);
-        assert_eq!("Example 32 [Test, Test]", format!("{s_type} {i_type} {v_type}"))
-    }
-    #[test]
     fn test_arg_error() {
         let var = "var_to_insert";
         let e = ArgError {
@@ -152,7 +117,9 @@ mod tests {
         };
 
         assert_eq!(e.message, "inserted_var: var_to_insert");
-        assert_eq!(format!("fmt {e}", e=e), "fmt Missing Value: inserted_var: var_to_insert");
-
+        assert_eq!(
+            format!("fmt {e}", e = e),
+            "fmt Missing Value: inserted_var: var_to_insert"
+        );
     }
 }

@@ -1,6 +1,6 @@
 mod config;
 use crate::config::taskfile::Taskfile;
-use clap::{value_parser, CommandFactory, Parser};
+use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -25,8 +25,7 @@ struct CliArgs {
     context: Option<String>,
 }
 
-fn main() {
-    let initial_arg_matches = CliArgs::command().get_matches();
+fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config") {
         Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
         Some(_) => {
@@ -59,9 +58,29 @@ fn main() {
     match selected_task.execute_command(clap_matched_args.to_owned(), task_context) {
         Ok(_) => {
             println!("Completed Task!");
+            return Ok(());
         }
         Err(_) => {
-            println!("Task Failed")
+            println!("Task Failed");
+            return Err(());
         }
     };
+}
+fn main() {
+    let initial_arg_matches = CliArgs::command().get_matches();
+    let _ = run_from_matches(initial_arg_matches);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{run_from_matches, CliArgs};
+    use clap::CommandFactory;
+
+    #[test]
+    fn test_entry_point() {
+        let initial_arg_matches =
+            CliArgs::command().get_matches_from(vec!["tasker", "hello", "Peter"]);
+        let result = run_from_matches(initial_arg_matches);
+        assert!(result.is_ok())
+    }
 }

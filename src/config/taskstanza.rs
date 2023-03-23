@@ -5,12 +5,12 @@ use std::{
 };
 
 use clap::ArgMatches;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::cmd::{ArgError, CmdArg};
 
 // task file command is a single defined command stanza from a config
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct TaskStanza {
     #[serde(rename(deserialize = "cmd"))]
     pub unparsed_command_raw: String,
@@ -158,7 +158,7 @@ pub mod taskstanza_test_helpers {
 }
 #[cfg(test)]
 mod tests {
-    use super::taskstanza_test_helpers::create_task_stanza_for_tests;
+    use super::{taskstanza_test_helpers::create_task_stanza_for_tests, TaskStanza};
     use std::{collections::HashMap, io};
 
     #[test]
@@ -263,5 +263,41 @@ mod tests {
             .get_matches_from(vec!["test", "hello", "world"]);
         let cmd = stanza.execute_command(arg_matches, HashMap::from([]));
         assert!(cmd.is_ok())
+    }
+
+    #[test]
+    fn test_load_from_yaml() {
+        let _: TaskStanza = serde_yaml::from_str(
+            r#"cmd: echo ${required_arg} ${optional_arg}
+description: "greets a user"
+args:
+  - name: required_arg
+    type: string
+  - name: optional_arg
+    type: string
+    default: world"#,
+        )
+        .unwrap();
+    }
+    #[test]
+    fn test_parse_yaml() {
+        let parsed_object: TaskStanza = serde_yaml::from_str(
+            r#"cmd: echo ${required_arg} ${optional_arg}
+description: "greets a user"
+args:
+  - name: required_arg
+    type: string
+  - name: optional_arg
+    type: string
+    default: world"#,
+        )
+        .unwrap();
+        assert_eq!("required_arg", parsed_object.command_args[0].name);
+        assert_eq!("optional_arg", parsed_object.command_args[1].name);
+        assert_eq!("greets a user", parsed_object.description.unwrap());
+        assert_eq!(
+            "echo ${required_arg} ${optional_arg}",
+            parsed_object.unparsed_command_raw
+        );
     }
 }
