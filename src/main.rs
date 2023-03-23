@@ -3,7 +3,7 @@ use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use std::path::PathBuf;
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
 struct CliArgs {
     #[arg(default_value = "Taskfile", short, long, help="file path to load tasks from", value_parser=value_parser!(PathBuf))]
@@ -30,13 +30,17 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
         Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
         Some(_) => {
             println!("Error: No Taskfile found");
-            CliArgs::command().print_help().unwrap();
-            std::process::exit(1)
+            if !cfg!(test) {
+                CliArgs::command().print_help().unwrap();
+            }
+            return Err(());
         }
         None => {
             println!("Error: Not a valid filepath for Taskfile");
-            CliArgs::command().print_help().unwrap();
-            std::process::exit(1)
+            if !cfg!(test) {
+                CliArgs::command().print_help().unwrap();
+            }
+            return Err(());
         }
     };
     // clap will catch any missing or bad args
@@ -82,5 +86,12 @@ mod tests {
             CliArgs::command().get_matches_from(vec!["tasker", "hello", "Peter"]);
         let result = run_from_matches(initial_arg_matches);
         assert!(result.is_ok())
+    }
+    #[test]
+    fn test_missing_file() {
+        let initial_arg_matches =
+            CliArgs::command().get_matches_from(vec!["tasker", "-c", "fakefile", "hello", "Peter"]);
+        let result = run_from_matches(initial_arg_matches);
+        assert!(result.is_err())
     }
 }
