@@ -50,7 +50,7 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
     // clap will catch any missing or bad args
 
     let mut runner = TaskRunner::new(config);
-    runner.setup_task_environment(initial_arg_matches);
+    runner.execute_task(initial_arg_matches);
     return Ok(());
 }
 fn main() {
