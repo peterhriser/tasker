@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    io,
+    process::{ChildStdout, Command, Stdio},
+};
 
 use clap::ArgMatches;
 
@@ -22,7 +26,7 @@ impl TaskRunner {
     fn get_config(&self) -> &Taskfile {
         &self.config
     }
-    fn get_subtask(&self, task: TaskStanza) -> Option<(String, TaskStanza)> {
+    fn get_subtask(&self, task: &TaskStanza) -> Option<(String, TaskStanza)> {
         let subtask = self.config.get_subtask(task);
         match subtask {
             Ok((name, task)) => Some((name, task)),
@@ -81,7 +85,7 @@ impl TaskRunner {
         let command_string = match task.is_subtask() {
             true => {
                 let raw_cmd = task.unparsed_commands.to_string();
-                let (subtask_name, subtask) = self.get_subtask(task).unwrap();
+                let (subtask_name, subtask) = self.get_subtask(&task).unwrap();
                 let task_args = raw_cmd
                     .split(" ")
                     .collect::<Vec<&str>>()
@@ -89,11 +93,6 @@ impl TaskRunner {
                     .1
                     .join(" ");
                 let task_args_parsed = self.replace_string_with_args(task_args);
-                println!(
-                    "HERE -> {} {}",
-                    subtask_name.as_str(),
-                    task_args_parsed.as_str()
-                );
                 let complete_args_parsed =
                     format!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
                 println!("before_get_matches -> {}", complete_args_parsed.as_str());
@@ -125,10 +124,63 @@ impl TaskRunner {
         }
         new_string
     }
+    fn parse_command_from_string(command: String) -> Command {
+        // todo: move to util module
+        let mut parts = command.split_whitespace();
+        let command_name = parts.next().expect("no command specified");
+        let args = parts;
 
-    pub fn setup_task_environment(&mut self, initial_arg_matches: ArgMatches) {
-        // TODOL: make this a function
-        let task_context_name = initial_arg_matches.get_one::<String>("context");
+        let mut cmd = Command::new(command_name);
+        cmd.args(args);
+        cmd
+    }
+    fn call_command(mut command: Command) -> Result<(), Box<dyn std::error::Error>> {
+        let cmd_stdout = command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+            .stdout
+            .unwrap();
+
+        let reader = io::BufReader::new(cmd_stdout);
+
+        io::BufRead::lines(reader).for_each(|line| {
+            io::Write::flush(&mut io::stdout()).unwrap();
+            println!("> {}", line.unwrap())
+        });
+
+        Ok(())
+    }
+    fn load_variables(
+        &mut self,
+        selected_task: &TaskStanza,
+        task_name: String,
+        selected_context: HashMap<String, String>,
+        cli_inputs: ArgMatches,
+    ) {
+        // 3. defaults
+        self.update_variables_from_task_stanza(selected_task.to_owned());
+        if selected_task.is_subtask() {
+            let (_, subtask) = self.get_subtask(selected_task).unwrap();
+            self.update_variables_from_task_stanza(subtask.to_owned());
+        }
+        // 2. context
+        self.update_variables_from_context(selected_context);
+
+        // 1. cli input
+        self.update_variables_from_arg_matches(&cli_inputs.subcommand_matches(&task_name).unwrap());
+    }
+    fn parse_cli_inputs(
+        &mut self,
+        initial_arg_matches: ArgMatches,
+    ) -> (String, Option<String>, ArgMatches) {
+        // TODO: make this a function
+        let context_name = initial_arg_matches.get_one::<String>("context");
+        let context_name = match context_name {
+            Some(name) => Some(name.to_owned()),
+            None => None,
+        };
         // we can be confident in unwraps since we verify most values above on load
         let raw_args: Vec<_> = initial_arg_matches
             .get_many::<String>("task_info")
@@ -137,26 +189,31 @@ impl TaskRunner {
 
         let cli_inputs = self.clap_config.to_owned().get_matches_from(raw_args);
         // get matches found so far and parse into subcommand
-        let (subcommand_name, _) = cli_inputs.subcommand().unwrap();
-        let selected_task = self.get_config().to_owned();
-        let selected_task = selected_task.get_task_by_name(subcommand_name).unwrap();
-        let task_context = self.config.get_context(task_context_name);
+        let (task_name, _) = cli_inputs.subcommand().unwrap();
+        let task_name = task_name.to_string().to_owned();
+        return (task_name, context_name, cli_inputs);
+    }
+    pub fn gather_task_info_from_cli(
+        &mut self,
+        task_name: &String,
+        context_name: Option<String>,
+    ) -> (TaskStanza, HashMap<String, String>) {
+        // TODO: make this a function
+        let cfg = self.get_config().to_owned();
+        let selected_task = cfg.get_task_by_name(task_name).unwrap();
+        let task_context = self.config.get_context(context_name);
+        return (selected_task.to_owned(), task_context.to_owned());
+    }
 
-        // 3. defaults
-        self.update_variables_from_task_stanza(selected_task.to_owned());
-        if selected_task.is_subtask() {
-            let (_, subtask) = self.get_subtask(selected_task.to_owned()).unwrap();
-            self.update_variables_from_task_stanza(subtask.to_owned());
-        }
-        // 2. context
-        self.update_variables_from_context(task_context);
+    pub fn execute_task(&mut self, initial_arg_matches: ArgMatches) {
+        let (task_name, context_name, cli_inputs) = self.parse_cli_inputs(initial_arg_matches);
+        let (selected_task, selected_context) =
+            self.gather_task_info_from_cli(&task_name, context_name);
 
-        // 1. cli input
-        self.update_variables_from_arg_matches(
-            &cli_inputs.subcommand_matches(&subcommand_name).unwrap(),
-        );
-        let parsed_command = self.get_command_string_parsed(selected_task.to_owned());
-        println!("{}", parsed_command);
+        self.load_variables(&selected_task, task_name, selected_context, cli_inputs);
+        let parsed_command = self.get_command_string_parsed(selected_task);
+        let command = TaskRunner::parse_command_from_string(parsed_command);
+        TaskRunner::call_command(command).unwrap();
     }
 }
 

@@ -21,8 +21,8 @@ impl Taskfile {
     pub fn get_task_by_name(&self, name: &str) -> Option<&TaskStanza> {
         return self.commands.get(name);
     }
-    pub fn get_subtask(&self, task: TaskStanza) -> Result<(String, TaskStanza), String> {
-        return match task.unparsed_commands {
+    pub fn get_subtask(&self, task: &TaskStanza) -> Result<(String, TaskStanza), String> {
+        return match &task.unparsed_commands {
             UnparsedCommandEnum::Cmds(_) => Err("No subtask found".to_string()),
             UnparsedCommandEnum::Tasks(task_string) => {
                 let name = task_string.split(" ").next().unwrap();
@@ -33,11 +33,11 @@ impl Taskfile {
             }
         };
     }
-    pub fn get_context(&self, value: Option<&String>) -> HashMap<String, String> {
+    pub fn get_context(&self, value: Option<String>) -> HashMap<String, String> {
         let default = HashMap::<String, String>::new();
         return match value {
             Some(context_name) => {
-                let task_context = self.contexts.get(context_name);
+                let task_context = self.contexts.get(&context_name);
                 match task_context {
                     Some(context) => context.to_owned(),
                     None => default,
@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn test_get_context() {
         let taskfile = load_from_string();
-        let context = taskfile.get_context(Some(&"test".to_string()));
+        let context = taskfile.get_context(Some("test".to_string()));
         assert_eq!(context.get("test_key"), Some(&"test_value".to_string()));
     }
     #[test]
@@ -98,14 +98,14 @@ mod tests {
     fn test_get_subtask() {
         let taskfile = load_from_string();
         let task = taskfile.get_task_by_name("test-task").unwrap().to_owned();
-        let subtask = taskfile.get_subtask(task);
+        let subtask = taskfile.get_subtask(&task);
         assert!(subtask.is_ok());
     }
     #[test]
     fn test_get_subtask_none() {
         let taskfile = load_from_string();
         let task = taskfile.get_task_by_name("test-cmd").unwrap().to_owned();
-        let subtask = taskfile.get_subtask(task);
+        let subtask = taskfile.get_subtask(&task);
         assert!(!subtask.is_ok());
     }
 }
