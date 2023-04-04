@@ -60,79 +60,28 @@ fn main() {
 
 #[cfg(test)]
 pub mod test_helpers {
-    use crate::config::{
-        cmd::CmdArg,
-        taskfile::Taskfile,
-        taskstanza::{TaskStanza, UnparsedCommandEnum},
-    };
-
-    pub fn create_cmd_arg_for_test(required: bool) -> CmdArg {
-        if required {
-            return CmdArg {
-                name: "required_arg".to_string(),
-                default: None,
-                arg_type: "string".to_string(),
-            };
-        } else {
-            return CmdArg {
-                name: "optional_arg".to_string(),
-                default: Some("DefaultValue".to_string()),
-                arg_type: "string".to_string(),
-            };
-        }
-    }
-    pub fn create_task_stanza_for_tests(optional_arg: bool) -> TaskStanza {
-        if optional_arg {
-            return TaskStanza {
-                unparsed_commands: UnparsedCommandEnum::Cmds(
-                    "echo ${required_arg} ${optional_arg}".to_string(),
-                ),
-                command_args: vec![
-                    create_cmd_arg_for_test(true),
-                    create_cmd_arg_for_test(false),
-                ],
-                description: Some("this has a required and optional arg".to_string()),
-            };
-        } else {
-            return TaskStanza {
-                unparsed_commands: UnparsedCommandEnum::Cmds("echo ${required_arg}".to_string()),
-                command_args: vec![
-                    create_cmd_arg_for_test(true),
-                    create_cmd_arg_for_test(false),
-                ],
-                description: Some("this has a required only".to_string()),
-            };
-        }
-    }
+    use crate::config::taskfile::Taskfile;
     pub fn load_from_string() -> Taskfile {
         let example_file = r#"project: "Example"
 version: "1.0"
 author: "Peter"
 contexts:
-  staging:
-    vars:
-      name: Peter
-      last_name: Riser
-  prod:
-    vars:
-      name: Peter "Lord DevOp"
+  test:
+    test_key: test_value
 commands:
-  hello:
-    cmds: echo ${name} ${last_name}
+  test-cmd:
+    cmds: echo ${first} ${last}
     description: "greets a user"
     args:
-      - name: name
+      - name: first
         type: string
-      - name: last_name
+      - name: last
         type: string
-        default: "the First"
-  tail-log:
-    cmds: tail -f /var/log/${log_name}
-    description: "tails a log in /var/log/"
+        default: "default"
+  test-task:
+    tasks: test-cmd beginning end
+    description: ""
     args:
-      - name: log_name
-        type: string
-        default: syslog
 "#;
         return serde_yaml::from_str(example_file).unwrap();
     }
