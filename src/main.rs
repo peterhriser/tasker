@@ -1,5 +1,6 @@
 mod config;
 mod runners;
+mod utils;
 
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};

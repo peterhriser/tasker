@@ -1,12 +1,11 @@
-use std::{
-    collections::HashMap,
-    io,
-    process::{ChildStdout, Command, Stdio},
-};
+use std::collections::HashMap;
 
 use clap::ArgMatches;
 
-use crate::config::{taskfile::Taskfile, taskstanza::TaskStanza};
+use crate::{
+    config::{taskfile::Taskfile, taskstanza::TaskStanza},
+    utils::{call_command, parse_command_from_string, split_exclude_quotes},
+};
 
 pub struct TaskRunner {
     config: Taskfile,
@@ -63,23 +62,6 @@ impl TaskRunner {
             self.upsert_into_variable_map(key.to_owned(), value.to_owned());
         }
     }
-    fn split_exclude_quotes(s: String) -> Vec<String> {
-        let mut split = vec![];
-        let mut current = String::new();
-        let mut in_quotes = false;
-        for c in s.chars() {
-            if c == '"' {
-                in_quotes = !in_quotes;
-            } else if c == ' ' && !in_quotes {
-                split.push(current.clone().to_string());
-                current = String::new();
-            } else {
-                current.push(c);
-            }
-        }
-        split.push(current.clone().to_string());
-        split
-    }
 
     fn get_command_string_parsed(&mut self, task: TaskStanza) -> String {
         let command_string = match task.is_subtask() {
@@ -99,7 +81,7 @@ impl TaskRunner {
                 let arg_matches_subtask = self
                     .clap_config
                     .to_owned()
-                    .get_matches_from(TaskRunner::split_exclude_quotes(complete_args_parsed));
+                    .get_matches_from(split_exclude_quotes(complete_args_parsed));
                 self.update_variables_from_arg_matches(
                     &arg_matches_subtask
                         .subcommand_matches(&subtask_name)
@@ -123,34 +105,6 @@ impl TaskRunner {
             }
         }
         new_string
-    }
-    fn parse_command_from_string(command: String) -> Command {
-        // todo: move to util module
-        let mut parts = command.split_whitespace();
-        let command_name = parts.next().expect("no command specified");
-        let args = parts;
-
-        let mut cmd = Command::new(command_name);
-        cmd.args(args);
-        cmd
-    }
-    fn call_command(mut command: Command) -> Result<(), Box<dyn std::error::Error>> {
-        let cmd_stdout = command
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap()
-            .stdout
-            .unwrap();
-
-        let reader = io::BufReader::new(cmd_stdout);
-
-        io::BufRead::lines(reader).for_each(|line| {
-            io::Write::flush(&mut io::stdout()).unwrap();
-            println!("> {}", line.unwrap())
-        });
-
-        Ok(())
     }
     fn load_variables(
         &mut self,
@@ -212,8 +166,8 @@ impl TaskRunner {
 
         self.load_variables(&selected_task, task_name, selected_context, cli_inputs);
         let parsed_command = self.get_command_string_parsed(selected_task);
-        let command = TaskRunner::parse_command_from_string(parsed_command);
-        TaskRunner::call_command(command).unwrap();
+        let command = parse_command_from_string(parsed_command);
+        call_command(command).unwrap();
     }
 }
 
@@ -291,10 +245,5 @@ mod tests {
 
         let new_string = runner.get_command_string_parsed(task.to_owned());
         assert_eq!(new_string, "echo beginning end");
-    }
-    #[test]
-    fn test_split_exclude_quotes() {
-        let spl = TaskRunner::split_exclude_quotes("echo \"beginning is here\" end".to_string());
-        assert_eq!(vec!["echo", "beginning is here", "end"], spl);
     }
 }
