@@ -42,4 +42,4 @@ commands:
     args:
       - name: insult
         type: string
-        default: a-hamster
+        default: "a hamster"
