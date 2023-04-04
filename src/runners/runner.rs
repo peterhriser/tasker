@@ -59,6 +59,24 @@ impl TaskRunner {
             self.upsert_into_variable_map(key.to_owned(), value.to_owned());
         }
     }
+    fn split_exclude_quotes(s: String) -> Vec<String> {
+        let mut split = vec![];
+        let mut current = String::new();
+        let mut in_quotes = false;
+        for c in s.chars() {
+            if c == '"' {
+                in_quotes = !in_quotes;
+            } else if c == ' ' && !in_quotes {
+                split.push(current.clone().to_string());
+                current = String::new();
+            } else {
+                current.push(c);
+            }
+        }
+        split.push(current.clone().to_string());
+        split
+    }
+
     fn get_command_string_parsed(&mut self, task: TaskStanza) -> String {
         let command_string = match task.is_subtask() {
             true => {
@@ -71,13 +89,18 @@ impl TaskRunner {
                     .1
                     .join(" ");
                 let task_args_parsed = self.replace_string_with_args(task_args);
-                println!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
+                println!(
+                    "HERE -> {} {}",
+                    subtask_name.as_str(),
+                    task_args_parsed.as_str()
+                );
                 let complete_args_parsed =
                     format!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
+                println!("before_get_matches -> {}", complete_args_parsed.as_str());
                 let arg_matches_subtask = self
                     .clap_config
                     .to_owned()
-                    .get_matches_from(complete_args_parsed.split(" "));
+                    .get_matches_from(TaskRunner::split_exclude_quotes(complete_args_parsed));
                 self.update_variables_from_arg_matches(
                     &arg_matches_subtask
                         .subcommand_matches(&subtask_name)
@@ -92,7 +115,13 @@ impl TaskRunner {
     fn replace_string_with_args(&self, string: String) -> String {
         let mut new_string = string;
         for (key, value) in self.variable_lookup.iter() {
-            new_string = new_string.replace(&format!("${{{}}}", key), value);
+            if value.contains(" ") {
+                new_string =
+                    new_string.replace(&format!("${{{}}}", key), &format!("\"{}\"", value));
+                continue;
+            } else {
+                new_string = new_string.replace(&format!("${{{}}}", key), value);
+            }
         }
         new_string
     }
@@ -205,5 +234,10 @@ mod tests {
 
         let new_string = runner.get_command_string_parsed(task.to_owned());
         assert_eq!(new_string, "echo beginning end");
+    }
+    #[test]
+    fn test_split_exclude_quotes() {
+        let spl = TaskRunner::split_exclude_quotes("echo \"beginning is here\" end".to_string());
+        assert_eq!(vec!["echo", "beginning is here", "end"], spl);
     }
 }
