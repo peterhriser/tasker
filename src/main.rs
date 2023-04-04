@@ -1,6 +1,9 @@
 mod config;
+mod runners;
+
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
+use runners::runner::TaskRunner;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -43,38 +46,97 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
             return Err(());
         }
     };
+    let config = Taskfile::new(config_path).unwrap();
     // clap will catch any missing or bad args
-    let task_context_name = initial_arg_matches.get_one::<String>("context");
-    let config = Taskfile::new(config_path, task_context_name).unwrap();
-    let command_to_run = config.create_clap_command();
 
-    // we can be confident in unwraps since we verify most values above on load
-    let raw_args: Vec<_> = initial_arg_matches
-        .get_many::<String>("task_info")
-        .unwrap()
-        .collect();
-
-    // get matches found so far and parse into subcommand
-    let cli_inputs = command_to_run.get_matches_from(raw_args);
-    let (subcommand_name, clap_matched_args) = cli_inputs.subcommand().unwrap();
-    let selected_task = config.get_task_by_name(subcommand_name).unwrap();
-    let task_context = config.get_context(task_context_name);
-    match selected_task.execute_command(clap_matched_args.to_owned(), task_context) {
-        Ok(_) => {
-            println!("Completed Task!");
-            return Ok(());
-        }
-        Err(_) => {
-            println!("Task Failed");
-            return Err(());
-        }
-    };
+    let mut runner = TaskRunner::new(config);
+    runner.setup_task_environment(initial_arg_matches);
+    return Ok(());
 }
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
     let _ = run_from_matches(initial_arg_matches);
 }
 
+#[cfg(test)]
+pub mod test_helpers {
+    use crate::config::{
+        cmd::CmdArg,
+        taskfile::Taskfile,
+        taskstanza::{TaskStanza, UnparsedCommandEnum},
+    };
+
+    pub fn create_cmd_arg_for_test(required: bool) -> CmdArg {
+        if required {
+            return CmdArg {
+                name: "required_arg".to_string(),
+                default: None,
+                arg_type: "string".to_string(),
+            };
+        } else {
+            return CmdArg {
+                name: "optional_arg".to_string(),
+                default: Some("DefaultValue".to_string()),
+                arg_type: "string".to_string(),
+            };
+        }
+    }
+    pub fn create_task_stanza_for_tests(optional_arg: bool) -> TaskStanza {
+        if optional_arg {
+            return TaskStanza {
+                unparsed_commands: UnparsedCommandEnum::Cmds(
+                    "echo ${required_arg} ${optional_arg}".to_string(),
+                ),
+                command_args: vec![
+                    create_cmd_arg_for_test(true),
+                    create_cmd_arg_for_test(false),
+                ],
+                description: Some("this has a required and optional arg".to_string()),
+            };
+        } else {
+            return TaskStanza {
+                unparsed_commands: UnparsedCommandEnum::Cmds("echo ${required_arg}".to_string()),
+                command_args: vec![
+                    create_cmd_arg_for_test(true),
+                    create_cmd_arg_for_test(false),
+                ],
+                description: Some("this has a required only".to_string()),
+            };
+        }
+    }
+    pub fn load_from_string() -> Taskfile {
+        let example_file = r#"project: "Example"
+version: "1.0"
+author: "Peter"
+contexts:
+  staging:
+    vars:
+      name: Peter
+      last_name: Riser
+  prod:
+    vars:
+      name: Peter "Lord DevOp"
+commands:
+  hello:
+    cmds: echo ${name} ${last_name}
+    description: "greets a user"
+    args:
+      - name: name
+        type: string
+      - name: last_name
+        type: string
+        default: "the First"
+  tail-log:
+    cmds: tail -f /var/log/${log_name}
+    description: "tails a log in /var/log/"
+    args:
+      - name: log_name
+        type: string
+        default: syslog
+"#;
+        return serde_yaml::from_str(example_file).unwrap();
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::{run_from_matches, CliArgs};
