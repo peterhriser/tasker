@@ -35,3 +35,11 @@ commands:
     tasks: howdy yall, ok!
     description: "howdy everyone!"
     args:
+
+  un-yall:
+    tasks: howdy you-two-time-sunnova ${insult}
+    description: "howdy everyone!"
+    args:
+      - name: insult
+        type: string
+        default: a-hamster

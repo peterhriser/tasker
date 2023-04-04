@@ -47,7 +47,6 @@ impl TaskRunner {
         for id in args.ids() {
             let key = id.to_string();
             let value = args.get_one::<String>(id.as_str()).unwrap().to_string();
-            println!("KV {}: {}", key, value);
             self.upsert_into_variable_map(key, value);
         }
     }
@@ -56,7 +55,6 @@ impl TaskRunner {
             self.upsert_into_variable_map(key.to_owned(), value.to_owned());
         }
     }
-    fn replace_command_variables() {}
     fn is_subtask(&self, task: TaskStanza) -> bool {
         match task.unparsed_commands {
             UnparsedCommandEnum::Cmds(_) => false,
@@ -78,9 +76,7 @@ impl TaskRunner {
     fn get_command_string_parsed(&mut self, task: TaskStanza) -> String {
         let command_string = match self.is_subtask(task.to_owned()) {
             true => {
-
                 let raw_cmd = task.unparsed_commands.to_string();
-                println!("RAW CMD: {:#?}", raw_cmd);
                 let (subtask_name, subtask) = self.get_subtask(task);
                 let task_args = raw_cmd
                     .split(" ")
@@ -89,15 +85,18 @@ impl TaskRunner {
                     .1
                     .join(" ");
                 let task_args_parsed = self.replace_string_with_args(task_args);
-                let complete_args_parsed = format!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
-                println!("TASK ARGS PARSED: {:#?}", task_args_parsed);
-                println!("NAME: {:#?}", complete_args_parsed);
+                println!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
+                let complete_args_parsed =
+                    format!("{} {}", subtask_name.as_str(), task_args_parsed.as_str());
                 let arg_matches_subtask = self
                     .clap_config
                     .to_owned()
                     .get_matches_from(complete_args_parsed.split(" "));
-                // println!("ARG MATCHES: {:#?}", arg_matches_subtask);
-                self.update_variables_from_arg_matches(&arg_matches_subtask.subcommand_matches(&subtask_name).unwrap());
+                self.update_variables_from_arg_matches(
+                    &arg_matches_subtask
+                        .subcommand_matches(&subtask_name)
+                        .unwrap(),
+                );
                 self.get_command_string_parsed(subtask)
             }
             false => task.unparsed_commands.to_string(),
@@ -144,14 +143,13 @@ impl TaskRunner {
         self.update_variables_from_context(task_context);
 
         // 1. cli input
-        self.update_variables_from_arg_matches(&cli_inputs.subcommand_matches(&subcommand_name).unwrap());
+        self.update_variables_from_arg_matches(
+            &cli_inputs.subcommand_matches(&subcommand_name).unwrap(),
+        );
         let parsed_command = self.get_command_string_parsed(selected_task.to_owned());
-        println!("VARS: {:#?}", self.variable_lookup);
-        println!("{}", parsed_command.to_owned());
+        println!("{}", parsed_command);
     }
-    fn run(&mut self, task_name: &str, args: &ArgMatches) -> Option<String> {
-        Some("yeet".to_string())
-    }
+
 }
 
 #[cfg(test)]
