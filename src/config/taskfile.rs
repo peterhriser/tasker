@@ -1,10 +1,9 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::cmd::CmdArg;
-use super::taskcontext::TaskContext;
-use super::taskstanza::TaskStanza;
+use super::taskstanza::{TaskStanza, UnparsedCommandEnum};
 
+type TaskContext = HashMap<String, String>;
 // Taskfile File made from assembling above structs
 #[derive(Deserialize, Clone)]
 pub struct Taskfile {
@@ -13,45 +12,34 @@ pub struct Taskfile {
 }
 
 impl Taskfile {
-    pub fn get_task_by_name(&self, name: &str) -> Option<&TaskStanza> {
-        return self.commands.get(name);
-    }
-
-    pub fn new(file_path: String, context: Option<&String>) -> Result<Taskfile, std::io::Error> {
+    pub fn new(file_path: String) -> Result<Taskfile, std::io::Error> {
         let file = std::fs::File::open(file_path).unwrap();
         let base_deserialized_config: Taskfile =
             serde_yaml::from_reader(file).expect("Could not read values.");
-
-        let mut new_deserialized_config = base_deserialized_config.clone();
-        let selected_context = &base_deserialized_config.get_context(context);
-        for (name, item) in &base_deserialized_config.commands {
-            let mut new_task_stanza = item.clone();
-            let mut new_command_args: Vec<CmdArg> = vec![];
-            for arg in &item.command_args {
-                let new_default = selected_context.get(&arg.name.to_string());
-                let new_default_parsed = match new_default {
-                    Some(item) => Some(item.to_owned()),
-                    None => None,
-                };
-                let mut new_arg = arg.clone();
-                new_arg.set_default_from_option(new_default_parsed).unwrap();
-                new_command_args.push(new_arg);
+        Ok(base_deserialized_config)
+    }
+    pub fn get_task_by_name(&self, name: &str) -> Option<&TaskStanza> {
+        return self.commands.get(name);
+    }
+    pub fn get_subtask(&self, task: &TaskStanza) -> Result<(String, TaskStanza), String> {
+        return match &task.unparsed_commands {
+            UnparsedCommandEnum::Cmds(_) => Err("No subtask found".to_string()),
+            UnparsedCommandEnum::Tasks(task_string) => {
+                let name = task_string.split(" ").next().unwrap();
+                Ok((
+                    name.to_string(),
+                    self.get_task_by_name(name).unwrap().to_owned(),
+                ))
             }
-            new_task_stanza.set_args(new_command_args);
-            new_deserialized_config.set_command(name.to_string(), new_task_stanza);
-        }
-        Ok(new_deserialized_config)
+        };
     }
-    fn set_command(&mut self, name: String, command: TaskStanza) {
-        self.commands.insert(name, command);
-    }
-    pub fn get_context(&self, value: Option<&String>) -> HashMap<String, String> {
+    pub fn get_context(&self, value: Option<String>) -> HashMap<String, String> {
         let default = HashMap::<String, String>::new();
         return match value {
             Some(context_name) => {
-                let task_context = self.contexts.get(context_name);
+                let task_context = self.contexts.get(&context_name);
                 match task_context {
-                    Some(context) => context.vars.to_owned(),
+                    Some(context) => context.to_owned(),
                     None => default,
                 }
             }
@@ -74,41 +62,11 @@ impl Taskfile {
         return base_command;
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::Taskfile;
-    fn load_from_string() -> Taskfile {
-        let example_file = r#"project: "Example"
-version: "1.0"
-author: "Peter"
-contexts:
-  staging:
-    vars:
-      name: Peter
-      last_name: Riser
-  prod:
-    vars:
-      name: Peter "Lord DevOp"
-commands:
-  hello:
-    cmd: echo ${name} ${last_name}
-    description: "greets a user"
-    args:
-      - name: name
-        type: string
-      - name: last_name
-        type: string
-        default: "the First"
-  tail-log:
-    cmd: tail -f /var/log/${log_name}
-    description: "tails a log in /var/log/"
-    args:
-      - name: log_name
-        type: string
-        default: syslog
-"#;
-        return serde_yaml::from_str(example_file).unwrap();
-    }
+    use crate::test_helpers::load_from_string;
 
     #[test]
     fn test_load_from_yaml() {
@@ -116,24 +74,38 @@ commands:
     }
     #[test]
     fn test_load_from_file() {
-        let _ = Taskfile::new("Taskfile".to_string(), None);
+        let _ = Taskfile::new("Taskfile".to_string());
+    }
+    #[test]
+    fn test_get_task_by_name() {
+        let taskfile = load_from_string();
+        let task = taskfile.get_task_by_name("test-cmd");
+        assert!(task.is_some());
     }
     #[test]
     fn test_get_context() {
         let taskfile = load_from_string();
-        let context_name = "staging".to_string();
-        let context = taskfile.get_context(Some(&context_name));
-        assert_eq!(context.get("name").unwrap().to_owned(), "Peter".to_string());
+        let context = taskfile.get_context(Some("test".to_string()));
+        assert_eq!(context.get("test_key"), Some(&"test_value".to_string()));
     }
     #[test]
-    fn test_create_clap_command() {
+    fn test_get_context_none() {
         let taskfile = load_from_string();
-        let cmd = taskfile.create_clap_command();
-        assert_eq!(
-            cmd.get_about().unwrap().to_string(),
-            "tasker runs tasks defined in a Taskfile"
-        );
-        let arg_count = cmd.get_subcommands().count();
-        assert_eq!(arg_count, 2);
+        let context = taskfile.get_context(None);
+        assert_eq!(context.get("test"), None);
+    }
+    #[test]
+    fn test_get_subtask() {
+        let taskfile = load_from_string();
+        let task = taskfile.get_task_by_name("test-task").unwrap().to_owned();
+        let subtask = taskfile.get_subtask(&task);
+        assert!(subtask.is_ok());
+    }
+    #[test]
+    fn test_get_subtask_none() {
+        let taskfile = load_from_string();
+        let task = taskfile.get_task_by_name("test-cmd").unwrap().to_owned();
+        let subtask = taskfile.get_subtask(&task);
+        assert!(!subtask.is_ok());
     }
 }

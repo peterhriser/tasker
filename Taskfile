@@ -5,17 +5,15 @@ author: "Peter"
 
 contexts:
   staging:
-    vars:
-      name: Peter
-      last_name: Riser
+    name: Peter
+    last_name: Riser
   prod:
-    vars:
-      name: Peter "Lord DevOp"
+    name: Peter "Lord DevOp"
 
 
 commands:
   hello:
-    cmd: echo ${name} ${last_name}
+    cmds: echo Hello ${name} ${last_name}
     description: "greets a user"
     args:
       - name: name
@@ -23,10 +21,25 @@ commands:
       - name: last_name
         type: string
         default: "the First"
-  tail-log:
-    cmd: tail -f /var/log/${log_name}
-    description: "tails a log in /var/log/"
+  howdy:
+    cmds: echo Howdy ${name} ${last_name}
+    description: "greets a user"
     args:
-      - name: log_name
+      - name: name
         type: string
-        default: syslog
+      - name: last_name
+        type: string
+        default: "the First"
+
+  yall:
+    tasks: howdy yall, ok!
+    description: "howdy everyone!"
+    args:
+
+  un-yall:
+    tasks: howdy you-two-time-sunnova ${insult}
+    description: "howdy everyone!"
+    args:
+      - name: insult
+        type: string
+        default: "a hamster"

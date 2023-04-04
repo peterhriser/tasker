@@ -1,6 +1,9 @@
 mod config;
+mod runners;
+
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
+use runners::runner::TaskRunner;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -43,38 +46,46 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
             return Err(());
         }
     };
+    let config = Taskfile::new(config_path).unwrap();
     // clap will catch any missing or bad args
-    let task_context_name = initial_arg_matches.get_one::<String>("context");
-    let config = Taskfile::new(config_path, task_context_name).unwrap();
-    let command_to_run = config.create_clap_command();
 
-    // we can be confident in unwraps since we verify most values above on load
-    let raw_args: Vec<_> = initial_arg_matches
-        .get_many::<String>("task_info")
-        .unwrap()
-        .collect();
-
-    // get matches found so far and parse into subcommand
-    let cli_inputs = command_to_run.get_matches_from(raw_args);
-    let (subcommand_name, clap_matched_args) = cli_inputs.subcommand().unwrap();
-    let selected_task = config.get_task_by_name(subcommand_name).unwrap();
-    let task_context = config.get_context(task_context_name);
-    match selected_task.execute_command(clap_matched_args.to_owned(), task_context) {
-        Ok(_) => {
-            println!("Completed Task!");
-            return Ok(());
-        }
-        Err(_) => {
-            println!("Task Failed");
-            return Err(());
-        }
-    };
+    let mut runner = TaskRunner::new(config);
+    runner.execute_task(initial_arg_matches);
+    return Ok(());
 }
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
     let _ = run_from_matches(initial_arg_matches);
 }
 
+#[cfg(test)]
+pub mod test_helpers {
+    use crate::config::taskfile::Taskfile;
+    pub fn load_from_string() -> Taskfile {
+        let example_file = r#"project: "Example"
+version: "1.0"
+author: "Peter"
+contexts:
+  test:
+    test_key: test_value
+commands:
+  test-cmd:
+    cmds: echo ${first} ${last}
+    description: "greets a user"
+    args:
+      - name: first
+        type: string
+      - name: last
+        type: string
+        default: "default"
+  test-task:
+    tasks: test-cmd beginning end
+    description: ""
+    args:
+"#;
+        return serde_yaml::from_str(example_file).unwrap();
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::{run_from_matches, CliArgs};
