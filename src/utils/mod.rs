@@ -3,7 +3,6 @@ pub mod strings;
 pub mod test_helpers;
 
 use std::{
-    collections::HashMap,
     io::{stdout, BufRead, BufReader, Write},
     process::{Command, Stdio},
 };
