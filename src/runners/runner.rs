@@ -5,8 +5,8 @@ use clap::ArgMatches;
 use crate::{
     config::{taskfile::Taskfile, taskstanza::TaskStanza},
     utils::{
-        call_command, parse_command_from_string, parse_task_args_from_string,
-        parse_task_name_from_string, upsert_into_hash_map,
+        call_command, iters::upsert_into_hash_map, parse_task_args_from_string,
+        parse_task_name_from_string, strings::parse_command_from_string,
     },
 };
 
@@ -196,8 +196,9 @@ impl TaskRunner {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::test_helpers::test_helpers::load_from_string;
+
     use super::TaskRunner;
-    use crate::test_helpers::load_from_string;
     use clap::{value_parser, Arg, Command};
     use std::collections::HashMap;
 

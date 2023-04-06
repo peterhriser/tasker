@@ -1,5 +1,6 @@
 mod config;
 mod runners;
+mod tests;
 mod utils;
 
 use crate::config::taskfile::Taskfile;
@@ -57,50 +58,4 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
     let _ = run_from_matches(initial_arg_matches);
-}
-
-#[cfg(test)]
-pub mod test_helpers {
-    use crate::config::taskfile::Taskfile;
-    pub fn load_from_string() -> Taskfile {
-        let example_file = r#"project: "Example"
-version: "1.0"
-author: "Peter"
-contexts:
-  test:
-    test_key: test_value
-tasks:
-  - name: test-cmd
-    commands:
-    - shell: echo Hello ${required_arg} ${default_arg}
-    description: "greets a user by name"
-    args:
-      - name: required_arg
-        type: string
-      - name: default_arg
-        type: string
-        default: default
-"#;
-        return serde_yaml::from_str(example_file).unwrap();
-    }
-}
-#[cfg(test)]
-mod tests {
-    use crate::{run_from_matches, CliArgs};
-    use clap::CommandFactory;
-
-    #[test]
-    fn test_entry_point() {
-        let initial_arg_matches =
-            CliArgs::command().get_matches_from(vec!["tasker","-c", "test/Taskfile", "greet", "Peter"]);
-        let result = run_from_matches(initial_arg_matches);
-        assert!(result.is_ok())
-    }
-    #[test]
-    fn test_missing_file() {
-        let initial_arg_matches =
-            CliArgs::command().get_matches_from(vec!["tasker", "-c", "fakefile", "hello", "Peter"]);
-        let result = run_from_matches(initial_arg_matches);
-        assert!(result.is_err())
-    }
 }

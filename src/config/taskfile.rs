@@ -53,7 +53,7 @@ impl Taskfile {
 #[cfg(test)]
 mod tests {
     use super::Taskfile;
-    use crate::test_helpers::load_from_string;
+    use crate::utils::test_helpers::test_helpers::load_from_string;
 
     #[test]
     fn test_load_from_yaml() {
