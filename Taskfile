@@ -11,35 +11,23 @@ contexts:
     name: Peter "Lord DevOp"
 
 
-commands:
-  hello:
-    cmds: echo Hello ${name} ${last_name}
-    description: "greets a user"
+tasks:
+  - name: greet
+    commands:
+    - shell: echo Hello ${first_name} ${last_name}
+    - shell: echo Goodbye ${first_name} ${last_name}
+    description: "greets a user by name"
     args:
-      - name: name
-        type: string
-      - name: last_name
-        type: string
-        default: "the First"
-  howdy:
-    cmds: echo Howdy ${name} ${last_name}
-    description: "greets a user"
-    args:
-      - name: name
+      - name: first_name
         type: string
       - name: last_name
         type: string
         default: "the First"
 
-  yall:
-    tasks: howdy yall, ok!
+  - name: all-greetings
+    commands:
+    - task: greet hello, greetings
+    - shell: echo guten tag, konnitchiwa
+    - task: greet hey, "and hi"
     description: "howdy everyone!"
     args:
-
-  un-yall:
-    tasks: howdy you-two-time-sunnova ${insult}
-    description: "howdy everyone!"
-    args:
-      - name: insult
-        type: string
-        default: "a hamster"

@@ -38,6 +38,12 @@ impl CmdArg {
             return clap::Arg::new(name_owned).required(true);
         }
     }
+    pub fn get_name(&self) -> &str {
+        return &self.name;
+    }
+    pub fn get_default(&self) -> Option<&str> {
+        return self.default.as_deref();
+    }
 }
 #[cfg(test)]
 mod tests {

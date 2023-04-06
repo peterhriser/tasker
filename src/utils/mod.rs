@@ -1,8 +1,21 @@
 use std::{
+    collections::HashMap,
     io::{stdout, BufRead, BufReader, Write},
     process::{Command, Stdio},
 };
-
+pub fn upsert_into_hash_map(key: String, value: String, hashmap: &mut HashMap<String, String>) {
+    if let Some(existing_value) = hashmap.get_mut(&key) {
+        *existing_value = value;
+    } else {
+        hashmap.insert(key, value);
+    }
+}
+pub fn parse_task_name_from_string(parsed_command: &String) -> String {
+    return split_exclude_quotes(parsed_command.to_string())[0].to_string();
+}
+pub fn parse_task_args_from_string(parsed_command: &String) -> Vec<String> {
+    return split_exclude_quotes(parsed_command.to_string())[1..].to_vec();
+}
 pub fn split_exclude_quotes(s: String) -> Vec<String> {
     let mut split = vec![];
     let mut current = String::new();

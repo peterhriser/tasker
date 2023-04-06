@@ -69,20 +69,17 @@ author: "Peter"
 contexts:
   test:
     test_key: test_value
-commands:
-  test-cmd:
-    cmds: echo ${first} ${last}
-    description: "greets a user"
+tasks:
+  - name: greet
+    commands:
+    - shell: echo Hello ${first_name} ${last_name}
+    description: "greets a user by name"
     args:
-      - name: first
+      - name: first_name
         type: string
-      - name: last
+      - name: last_name
         type: string
-        default: "default"
-  test-task:
-    tasks: test-cmd beginning end
-    description: ""
-    args:
+        default: "the First"
 "#;
         return serde_yaml::from_str(example_file).unwrap();
     }

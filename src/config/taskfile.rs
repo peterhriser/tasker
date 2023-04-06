@@ -1,37 +1,24 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::taskstanza::{TaskStanza, UnparsedCommandEnum};
+use super::taskstanza::TaskStanza;
 
 type TaskContext = HashMap<String, String>;
 // Taskfile File made from assembling above structs
 #[derive(Deserialize, Clone)]
 pub struct Taskfile {
     pub contexts: HashMap<String, TaskContext>,
-    pub commands: HashMap<String, TaskStanza>,
+    pub tasks: Vec<TaskStanza>,
 }
 
 impl Taskfile {
     pub fn new(file_path: String) -> Result<Taskfile, std::io::Error> {
         let file = std::fs::File::open(file_path).unwrap();
-        let base_deserialized_config: Taskfile =
-            serde_yaml::from_reader(file).expect("Could not read values.");
+        let base_deserialized_config: Taskfile = serde_yaml::from_reader(file).unwrap();
         Ok(base_deserialized_config)
     }
     pub fn get_task_by_name(&self, name: &str) -> Option<&TaskStanza> {
-        return self.commands.get(name);
-    }
-    pub fn get_subtask(&self, task: &TaskStanza) -> Result<(String, TaskStanza), String> {
-        return match &task.unparsed_commands {
-            UnparsedCommandEnum::Cmds(_) => Err("No subtask found".to_string()),
-            UnparsedCommandEnum::Tasks(task_string) => {
-                let name = task_string.split(" ").next().unwrap();
-                Ok((
-                    name.to_string(),
-                    self.get_task_by_name(name).unwrap().to_owned(),
-                ))
-            }
-        };
+        return self.tasks.iter().find(|&obj| obj.name == name);
     }
     pub fn get_context(&self, value: Option<String>) -> HashMap<String, String> {
         let default = HashMap::<String, String>::new();
@@ -48,8 +35,8 @@ impl Taskfile {
     }
     pub fn create_clap_command(&self) -> clap::Command {
         let mut task_vector: Vec<clap::Command> = vec![];
-        for (name, task) in &self.commands {
-            let new_command = task.create_clap_subcommand(name.to_string());
+        for task in &self.tasks {
+            let new_command = task.create_clap_subcommand();
             task_vector.push(new_command);
         }
         let base_command = clap::Command::new("tasker")
@@ -93,19 +80,5 @@ mod tests {
         let taskfile = load_from_string();
         let context = taskfile.get_context(None);
         assert_eq!(context.get("test"), None);
-    }
-    #[test]
-    fn test_get_subtask() {
-        let taskfile = load_from_string();
-        let task = taskfile.get_task_by_name("test-task").unwrap().to_owned();
-        let subtask = taskfile.get_subtask(&task);
-        assert!(subtask.is_ok());
-    }
-    #[test]
-    fn test_get_subtask_none() {
-        let taskfile = load_from_string();
-        let task = taskfile.get_task_by_name("test-cmd").unwrap().to_owned();
-        let subtask = taskfile.get_subtask(&task);
-        assert!(!subtask.is_ok());
     }
 }
