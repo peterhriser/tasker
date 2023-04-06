@@ -1,5 +1,7 @@
 mod config;
 mod runners;
+mod tests;
+mod utils;
 
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
@@ -56,53 +58,4 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
     let _ = run_from_matches(initial_arg_matches);
-}
-
-#[cfg(test)]
-pub mod test_helpers {
-    use crate::config::taskfile::Taskfile;
-    pub fn load_from_string() -> Taskfile {
-        let example_file = r#"project: "Example"
-version: "1.0"
-author: "Peter"
-contexts:
-  test:
-    test_key: test_value
-commands:
-  test-cmd:
-    cmds: echo ${first} ${last}
-    description: "greets a user"
-    args:
-      - name: first
-        type: string
-      - name: last
-        type: string
-        default: "default"
-  test-task:
-    tasks: test-cmd beginning end
-    description: ""
-    args:
-"#;
-        return serde_yaml::from_str(example_file).unwrap();
-    }
-}
-#[cfg(test)]
-mod tests {
-    use crate::{run_from_matches, CliArgs};
-    use clap::CommandFactory;
-
-    #[test]
-    fn test_entry_point() {
-        let initial_arg_matches =
-            CliArgs::command().get_matches_from(vec!["tasker", "hello", "Peter"]);
-        let result = run_from_matches(initial_arg_matches);
-        assert!(result.is_ok())
-    }
-    #[test]
-    fn test_missing_file() {
-        let initial_arg_matches =
-            CliArgs::command().get_matches_from(vec!["tasker", "-c", "fakefile", "hello", "Peter"]);
-        let result = run_from_matches(initial_arg_matches);
-        assert!(result.is_err())
-    }
 }
