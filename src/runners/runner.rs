@@ -3,10 +3,7 @@ use std::{collections::HashMap, process::Command};
 use clap::ArgMatches;
 
 use crate::{
-    config::{
-        taskfile::Taskfile,
-        taskstanza::{TaskStanza},
-    },
+    config::{taskfile::Taskfile, taskstanza::TaskStanza},
     utils::{
         call_command, parse_command_from_string, parse_task_args_from_string,
         parse_task_name_from_string, upsert_into_hash_map,
@@ -66,13 +63,11 @@ impl TaskRunner {
         self.variable_lookup = local_variable_lookup;
     }
 
-    fn replace_string_with_args(&self, string: String) -> String {
+    fn replace_string_with_args(string: String, local_vars: &HashMap<String, String>) -> String {
         let mut new_string = string;
-        for (key, value) in self.variable_lookup.iter() {
+        for (key, value) in local_vars.iter() {
             if value.contains(" ") {
-                new_string =
-                    new_string.replace(&format!("${{{}}}", key), &format!("\"{}\"", value));
-                continue;
+                new_string = new_string.replace(&format!("${{{}}}", key), &format!("{}", value));
             } else {
                 new_string = new_string.replace(&format!("${{{}}}", key), value);
             }
@@ -159,12 +154,14 @@ impl TaskRunner {
             match command_type {
                 // base case
                 crate::config::taskstanza::UnparsedCommandEnum::Shell(_) => {
-                    let parsed_command = self.replace_string_with_args(raw_command);
+                    let parsed_command =
+                        TaskRunner::replace_string_with_args(raw_command, &local_vars);
                     commands.push(parsed_command)
                 }
                 crate::config::taskstanza::UnparsedCommandEnum::Task(_) => {
                     // fill in variables, then recurse through the subtask
-                    let parsed_command = self.replace_string_with_args(raw_command);
+                    let parsed_command =
+                        TaskRunner::replace_string_with_args(raw_command, &local_vars);
                     let sub_task_name: String = parse_task_name_from_string(&parsed_command);
                     let sub_task_supplied_args: Vec<String> =
                         parse_task_args_from_string(&parsed_command);
@@ -180,14 +177,15 @@ impl TaskRunner {
                                 sub_task_expected_args[i].get_default().unwrap().to_string()
                             }
                         };
-                        upsert_into_hash_map(key.to_string(), value, &mut local_vars);
-                        commands.extend(
-                            self.get_all_commands_parsed(
-                                sub_task.to_owned(),
-                                local_vars.to_owned(),
-                            ),
+                        upsert_into_hash_map(
+                            key.to_string().to_owned(),
+                            value.to_owned(),
+                            &mut local_vars,
                         );
                     }
+                    commands.extend(
+                        self.get_all_commands_parsed(sub_task.to_owned(), local_vars.to_owned()),
+                    );
                 }
                 crate::config::taskstanza::UnparsedCommandEnum::Script(_) => unimplemented!(),
             }
@@ -229,7 +227,10 @@ mod tests {
         let mut runner = TaskRunner::new(load_from_string());
         let task = runner.get_config().get_task_by_name("test-cmd").unwrap();
         runner.update_variables_from_task_stanza(task.to_owned());
-        assert_eq!(runner.variable_lookup.get("default_arg").unwrap(), "default");
+        assert_eq!(
+            runner.variable_lookup.get("default_arg").unwrap(),
+            "default"
+        );
     }
     #[test]
     fn test_replace_string_with_args() {
@@ -237,7 +238,10 @@ mod tests {
         let map: HashMap<String, String> =
             HashMap::from([("test".to_string(), "test".to_string())]);
         runner.update_variables_from_context(map);
-        let new_string = runner.replace_string_with_args("test ${test}".to_string());
+        let new_string = TaskRunner::replace_string_with_args(
+            "test ${test}".to_string(),
+            &runner.variable_lookup,
+        );
         assert_eq!(new_string, "test test");
     }
 }

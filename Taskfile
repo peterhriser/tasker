@@ -31,3 +31,9 @@ tasks:
     - task: greet hey, "and hi"
     description: "howdy everyone!"
     args:
+
+  - name: example-one-task
+    commands:
+    - task: greet hello, greetings
+    description: ""
+    args:
