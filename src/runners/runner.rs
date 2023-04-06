@@ -5,11 +5,11 @@ use clap::ArgMatches;
 use crate::{
     config::{
         taskfile::Taskfile,
-        taskstanza::{TaskCmd, TaskStanza},
+        taskstanza::{TaskStanza},
     },
     utils::{
         call_command, parse_command_from_string, parse_task_args_from_string,
-        parse_task_name_from_string, split_exclude_quotes, upsert_into_hash_map,
+        parse_task_name_from_string, upsert_into_hash_map,
     },
 };
 
@@ -174,7 +174,7 @@ impl TaskRunner {
                         let arg = &sub_task_expected_args[i];
                         let key = arg.get_name();
                         let value = match sub_task_supplied_args.get(i) {
-                            Some(arg) => sub_task_supplied_args[i].to_string(),
+                            Some(_) => sub_task_supplied_args[i].to_string(),
                             None => {
                                 // TODO: handle error here for missing argument
                                 sub_task_expected_args[i].get_default().unwrap().to_string()
@@ -229,7 +229,7 @@ mod tests {
         let mut runner = TaskRunner::new(load_from_string());
         let task = runner.get_config().get_task_by_name("test-cmd").unwrap();
         runner.update_variables_from_task_stanza(task.to_owned());
-        assert_eq!(runner.variable_lookup.get("last").unwrap(), "default");
+        assert_eq!(runner.variable_lookup.get("default_arg").unwrap(), "default");
     }
     #[test]
     fn test_replace_string_with_args() {

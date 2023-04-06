@@ -1,0 +1,33 @@
+project: "Example"
+version: "1.0"
+author: "Peter"
+
+
+contexts:
+  staging:
+    name: Peter
+    last_name: Riser
+  prod:
+    name: Peter "Lord DevOp"
+
+
+tasks:
+  - name: greet
+    commands:
+    - shell: echo Hello ${first_name} ${last_name}
+    - shell: echo Goodbye ${first_name} ${last_name}
+    description: "greets a user by name"
+    args:
+      - name: first_name
+        type: string
+      - name: last_name
+        type: string
+        default: "the First"
+
+  - name: all-greetings
+    commands:
+    - task: greet hello, greetings
+    - shell: echo guten tag, konnitchiwa
+    - task: greet hey, "and hi"
+    description: "howdy everyone!"
+    args:

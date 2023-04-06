@@ -70,16 +70,16 @@ contexts:
   test:
     test_key: test_value
 tasks:
-  - name: greet
+  - name: test-cmd
     commands:
-    - shell: echo Hello ${first_name} ${last_name}
+    - shell: echo Hello ${required_arg} ${default_arg}
     description: "greets a user by name"
     args:
-      - name: first_name
+      - name: required_arg
         type: string
-      - name: last_name
+      - name: default_arg
         type: string
-        default: "the First"
+        default: default
 "#;
         return serde_yaml::from_str(example_file).unwrap();
     }
@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn test_entry_point() {
         let initial_arg_matches =
-            CliArgs::command().get_matches_from(vec!["tasker", "hello", "Peter"]);
+            CliArgs::command().get_matches_from(vec!["tasker","-c", "test/Taskfile", "greet", "Peter"]);
         let result = run_from_matches(initial_arg_matches);
         assert!(result.is_ok())
     }
