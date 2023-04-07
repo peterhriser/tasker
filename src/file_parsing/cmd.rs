@@ -22,6 +22,16 @@ pub enum CommandTypes {
     Shell(String),
     Script(String),
 }
+impl fmt::Display for CommandTypes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        return match &self {
+            CommandTypes::Task(value) => write!(f, "{}", value),
+            CommandTypes::Shell(value) => write!(f, "{}", value),
+            CommandTypes::Script(value) => write!(f, "{}", value),
+        };
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TaskCmd {
     pub key: CommandTypes,
@@ -82,17 +92,6 @@ impl<'de> Deserialize<'de> for TaskCmd {
     }
 }
 
-impl fmt::Display for CommandTypes {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return match &self {
-            CommandTypes::Task(value) => write!(f, "{}", value),
-            CommandTypes::Shell(value) => write!(f, "{}", value),
-            CommandTypes::Script(value) => write!(f, "{}", value),
-        };
-    }
-}
-
-
 // cmd arg stanzas
 #[derive(Deserialize, Clone)]
 pub struct CmdArg {
@@ -145,5 +144,65 @@ mod tests {
             message: "test".to_string(),
         };
         assert_eq!(arg_error.to_string(), "Missing Value: test");
+    }
+    #[test]
+    fn test_display_command_types() {
+        let task = super::CommandTypes::Task("task".to_string());
+        let shell = super::CommandTypes::Shell("shell".to_string());
+        let script = super::CommandTypes::Script("script".to_string());
+        assert_eq!(task.to_string(), "task");
+        assert_eq!(shell.to_string(), "shell");
+        assert_eq!(script.to_string(), "script");
+    }
+    #[test]
+    fn test_deserialize_task_cmd() {
+        let yaml = r#"
+        task: "test"
+        "#;
+        let task_cmd: super::TaskCmd = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(task_cmd.key.to_string(), "task");
+        assert_eq!(task_cmd.value, "test");
+    }
+    #[test]
+    fn test_deserialize_task_cmd_fmt_error() {
+        let yaml = r#"
+        task: "test"
+        task: "test"
+        "#;
+        let task_cmd: Result<super::TaskCmd, _> = serde_yaml::from_str(yaml);
+        assert_eq!(
+            task_cmd.unwrap_err().to_string(),
+            "duplicate field `duplicate key` at line 2 column 9"
+        );
+    }
+
+    #[test]
+    fn test_cmd_arg_get_name() {
+        let arg = super::CmdArg {
+            name: "test".to_string(),
+            default: Some("default".to_string()),
+            arg_type: "string".to_string(),
+        };
+        assert_eq!(arg.get_name(), "test");
+    }
+    #[test]
+    fn test_cmd_arg_get_default() {
+        let arg = super::CmdArg {
+            name: "test".to_string(),
+            default: Some("default".to_string()),
+            arg_type: "string".to_string(),
+        };
+        assert_eq!(arg.get_default(), Some("default"));
+    }
+    #[test]
+    fn test_deserialize_task_cmd_unknown_key() {
+        let yaml = r#"
+        test: "test"
+        "#;
+        let task_cmd: Result<super::TaskCmd, _> = serde_yaml::from_str(yaml);
+        assert_eq!(
+            task_cmd.unwrap_err().to_string(),
+            "unknown field `test`, expected one of `task`, `shell`, `script` at line 2 column 9"
+        );
     }
 }

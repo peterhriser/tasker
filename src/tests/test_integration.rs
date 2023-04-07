@@ -23,4 +23,10 @@ mod integration_tests {
         let result = run_from_matches(initial_arg_matches);
         assert!(result.is_err())
     }
+    #[test]
+    fn test_print_error() {
+        let initial_arg_matches = CliArgs::command().get_matches_from(vec!["tasker"]);
+        let result = run_from_matches(initial_arg_matches);
+        assert!(result.is_err())
+    }
 }
