@@ -28,6 +28,8 @@ struct CliArgs {
         help = "execution context to load for command"
     )]
     context: Option<String>,
+    #[arg(short, long, help="print out the commands that would be run instead of executing them")]
+    dry_run: bool,
 }
 
 fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
@@ -52,8 +54,17 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
     // clap will catch any missing or bad args
 
     let mut builder = TaskBuilder::new(config);
-    let runner = builder.create_task_runner(initial_arg_matches);
-    runner.execute_tasks();
+    let dry_run = initial_arg_matches.get_one::<bool>("dry_run");
+    let runner = builder.create_task_runner(initial_arg_matches.to_owned());
+    match  dry_run {
+        Some(true) =>  {
+            runner.print_commands();
+        },
+        Some(false) => {
+            runner.execute_tasks();
+        },
+        _ => (),
+    }
     return Ok(());
 }
 fn main() {
