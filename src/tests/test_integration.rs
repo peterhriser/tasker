@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod integration_tests {
-    use crate::{run_from_matches, CliArgs};
     use clap::CommandFactory;
+
+    use crate::{run_from_matches, CliArgs};
 
     #[test]
     fn test_entry_point() {
