@@ -19,8 +19,7 @@ Tasker is a task-runner/cli-as-code tool.
     - rust library
     - compile yaml and code into dist?
 - add error handling configuration (on-fail: do x)
-- dry run support
--
+- ~dry run support~
 # assumptions
 - assume args are ordered to start
 
