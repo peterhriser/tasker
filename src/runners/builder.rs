@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use clap::ArgMatches;
 
 use crate::{
-    config::{taskfile::Taskfile, taskstanza::TaskStanza},
+    file_parsing::{taskfile::Taskfile, taskstanza::TaskStanza},
     utils::{iters::upsert_into_hash_map, strings::split_exclude_quotes},
 };
 
@@ -146,11 +146,11 @@ impl TaskBuilder {
             let raw_command = cmd.value.to_owned();
             match command_type {
                 // base case
-                crate::config::taskstanza::UnparsedCommandEnum::Shell(_) => {
+                crate::file_parsing::cmd::CommandTypes::Shell(_) => {
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     commands.push(parsed_command)
                 }
-                crate::config::taskstanza::UnparsedCommandEnum::Task(_) => {
+                crate::file_parsing::cmd::CommandTypes::Task(_) => {
                     // fill in variables, then recurse through the subtask
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     let sub_task_name: String = Self::parse_task_name_from_string(&parsed_command);
@@ -178,7 +178,7 @@ impl TaskBuilder {
                         self.get_all_commands_parsed(sub_task.to_owned(), local_vars.to_owned()),
                     );
                 }
-                crate::config::taskstanza::UnparsedCommandEnum::Script(_) => unimplemented!(),
+                crate::file_parsing::cmd::CommandTypes::Script(_) => unimplemented!(),
             }
         }
         return commands;

@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod test_helpers {
-    use crate::config::taskfile::Taskfile;
+    use crate::file_parsing::taskfile::Taskfile;
     pub fn load_from_string() -> Taskfile {
         let example_file = r#"project: "Example"
 version: "1.0"

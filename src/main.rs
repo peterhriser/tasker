@@ -1,9 +1,9 @@
-mod config;
+mod file_parsing;
 mod runners;
 mod tests;
 mod utils;
 
-use crate::config::taskfile::Taskfile;
+use crate::file_parsing::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use runners::builder::TaskBuilder;
 use std::path::PathBuf;
