@@ -245,4 +245,17 @@ mod tests {
         );
         assert_eq!(new_string, "test test");
     }
+    #[test]
+    fn test_parse_task_name_from_string() {
+        let task_name = TaskBuilder::parse_task_name_from_string(&"test".to_string());
+        assert_eq!(task_name, "test");
+    }
+    #[test]
+    fn test_get_all_commands_parsed_with_task() {
+        let runner = TaskBuilder::new(load_from_string());
+        let task = runner.get_config().get_task_by_name("test-task").unwrap();
+        let commands = runner.get_all_commands_parsed(task.to_owned(), HashMap::new());
+        assert_eq!(commands[0], "echo Hello Foo Bar");
+        assert_eq!(commands[1], "echo Hello Bar Foo");
+    }
 }

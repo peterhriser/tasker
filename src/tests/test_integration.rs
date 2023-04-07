@@ -24,9 +24,16 @@ mod integration_tests {
         assert!(result.is_err())
     }
     #[test]
-    fn test_print_error() {
-        let initial_arg_matches = CliArgs::command().get_matches_from(vec!["tasker"]);
+    fn test_dry_run() {
+        let initial_arg_matches = CliArgs::command().get_matches_from(vec![
+            "tasker",
+            "-c",
+            "src/tests/Taskfile",
+            "--dry-run",
+            "greet",
+            "Peter",
+        ]);
         let result = run_from_matches(initial_arg_matches);
-        assert!(result.is_err())
+        assert!(result.is_ok())
     }
 }

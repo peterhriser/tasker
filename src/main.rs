@@ -37,8 +37,11 @@ struct CliArgs {
 }
 fn print_error() -> Result<(), ()> {
     println!("Error: No Valid Taskfile found");
+    let mut cmd = CliArgs::command();
+    println!("yeet: \n\n\n\n\n\n");
+    let help = cmd.render_help().to_string();
     if !cfg!(test) {
-        CliArgs::command().print_help().unwrap();
+        println!("{}", help);
     }
     return Err(());
 }

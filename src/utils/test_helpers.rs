@@ -19,6 +19,12 @@ tasks:
       - name: default_arg
         type: string
         default: default
+  - name: test-task
+    commands:
+    - task: test-cmd Foo Bar
+    - task: test-cmd Bar Foo
+    description: "greets a user by name"
+    args:
 "#;
         return serde_yaml::from_str(example_file).unwrap();
     }
