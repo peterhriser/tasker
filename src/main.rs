@@ -5,7 +5,7 @@ mod utils;
 
 use crate::config::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
-use runners::runner::TaskRunner;
+use runners::builder::TaskBuilder;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -51,8 +51,9 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
     let config = Taskfile::new(config_path).unwrap();
     // clap will catch any missing or bad args
 
-    let mut runner = TaskRunner::new(config);
-    runner.execute_task(initial_arg_matches);
+    let mut builder = TaskBuilder::new(config);
+    let runner = builder.create_task_runner(initial_arg_matches);
+    runner.execute_tasks();
     return Ok(());
 }
 fn main() {
