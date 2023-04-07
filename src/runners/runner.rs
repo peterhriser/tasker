@@ -53,7 +53,7 @@ impl TaskRunner {
     }
     pub fn print_commands(&self) {
         for i in 0..self.commands.len() {
-            println!("{:?}: {}",i, self.commands[i]);
+            println!("{:?}: {}", i, self.commands[i]);
         }
     }
 }
