@@ -51,6 +51,11 @@ impl TaskRunner {
             Self::call_command(cmd).expect("Error Executing Command");
         }
     }
+    pub fn print_commands(&self) {
+        for i in 0..self.commands.len() {
+            println!("{:?}: {}", i, self.commands[i]);
+        }
+    }
 }
 
 #[cfg(test)]
