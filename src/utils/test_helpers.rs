@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod test_helpers {
-    use crate::config::taskfile::Taskfile;
+    use crate::file_parsing::taskfile::Taskfile;
     pub fn load_from_string() -> Taskfile {
         let example_file = r#"project: "Example"
 version: "1.0"
@@ -19,6 +19,12 @@ tasks:
       - name: default_arg
         type: string
         default: default
+  - name: test-task
+    commands:
+    - task: test-cmd Foo Bar
+    - task: test-cmd Bar Foo
+    description: "greets a user by name"
+    args:
 "#;
         return serde_yaml::from_str(example_file).unwrap();
     }

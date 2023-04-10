@@ -1,9 +1,9 @@
-mod config;
+mod file_parsing;
 mod runners;
 mod tests;
 mod utils;
 
-use crate::config::taskfile::Taskfile;
+use crate::file_parsing::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use runners::builder::TaskBuilder;
 use std::path::PathBuf;
@@ -35,24 +35,21 @@ struct CliArgs {
     )]
     dry_run: bool,
 }
-
+fn print_error() -> Result<(), ()> {
+    println!("Error: No Valid Taskfile found");
+    let mut cmd = CliArgs::command();
+    println!("yeet: \n\n\n\n\n\n");
+    let help = cmd.render_help().to_string();
+    if !cfg!(test) {
+        println!("{}", help);
+    }
+    return Err(());
+}
 fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config") {
         Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
-        Some(_) => {
-            println!("Error: No Taskfile found");
-            if !cfg!(test) {
-                CliArgs::command().print_help().unwrap();
-            }
-            return Err(());
-        }
-        None => {
-            println!("Error: Not a valid filepath for Taskfile");
-            if !cfg!(test) {
-                CliArgs::command().print_help().unwrap();
-            }
-            return Err(());
-        }
+        Some(_) => return print_error(),
+        None => return print_error(),
     };
     let config = Taskfile::new(config_path).unwrap();
     // clap will catch any missing or bad args
