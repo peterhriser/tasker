@@ -8,6 +8,7 @@ pub enum CommandTypes {
     Task(String),
     Shell(String),
     Script(String),
+    Cwd(String),
 }
 impl fmt::Display for CommandTypes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -15,6 +16,7 @@ impl fmt::Display for CommandTypes {
             CommandTypes::Task(value) => write!(f, "{}", value),
             CommandTypes::Shell(value) => write!(f, "{}", value),
             CommandTypes::Script(value) => write!(f, "{}", value),
+            CommandTypes::Cwd(value) => write!(f, "{}", value),
         };
     }
 }

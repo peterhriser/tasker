@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::{errors::TaskfileError, taskstanza::TaskStanza};
+use super::{taskstanza::TaskStanza, errors::TaskfileError};
 
 type TaskContext = HashMap<String, String>;
 

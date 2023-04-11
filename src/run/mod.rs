@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use clap::ArgMatches;
 
 use crate::{
-    taskfile::{taskfile::Taskfile, taskstanza::TaskStanza},
+    taskfile::{Taskfile, TaskStanza, CommandTypes},
     utils::{iters::upsert_into_hash_map, strings::split_exclude_quotes},
 };
 use std::{
@@ -207,11 +207,11 @@ impl TaskBuilder {
             let raw_command = cmd.value.to_owned();
             match command_type {
                 // base case
-                crate::taskfile::cmd::CommandTypes::Shell(_) => {
+                CommandTypes::Shell(_) => {
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     commands.push(parsed_command)
                 }
-                crate::taskfile::cmd::CommandTypes::Task(_) => {
+                CommandTypes::Task(_) => {
                     // fill in variables, then recurse through the subtask
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     let sub_task_name: String = Self::parse_task_name_from_string(&parsed_command);
@@ -239,7 +239,7 @@ impl TaskBuilder {
                         self.get_all_commands_parsed(sub_task.to_owned(), local_vars.to_owned()),
                     );
                 }
-                crate::taskfile::cmd::CommandTypes::Script(_) => unimplemented!(),
+                _ => unimplemented!(),
             }
         }
         return commands;

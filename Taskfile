@@ -37,3 +37,9 @@ tasks:
     - task: greet hello, greetings
     description: ""
     args:
+  - name: cd-and-cat
+    commands:
+    - shell: cd src
+    - shell: cat main.rs
+    description: ""
+    args:
