@@ -15,8 +15,7 @@ impl TaskRunner {
         let cmd_stdout = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .unwrap()
+            .spawn()?
             .stdout
             .unwrap();
 
