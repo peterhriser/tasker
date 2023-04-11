@@ -31,13 +31,13 @@ impl TaskBuilder {
     // used for getting defaults and subtask values
     fn update_variables_from_task_stanza(&mut self, task: TaskStanza) {
         let mut local_variable_lookup = self.variable_lookup.clone();
-        for cmd in task.command_args {
-            let value = match cmd.default {
+        for cmd in task.get_command_args() {
+            let value = match cmd.get_default() {
                 Some(value) => value,
                 None => continue,
             };
-            let key = cmd.name;
-            upsert_into_hash_map(key, value, &mut local_variable_lookup);
+            let key = cmd.get_name();
+            upsert_into_hash_map(key.to_string(), value.to_string(), &mut local_variable_lookup);
         }
         self.variable_lookup = local_variable_lookup;
     }
@@ -157,7 +157,7 @@ impl TaskBuilder {
                     let sub_task_supplied_args: Vec<String> =
                         Self::parse_task_args_from_string(&parsed_command);
                     let sub_task = self.config.get_task_by_name(&sub_task_name).unwrap();
-                    let sub_task_expected_args = &sub_task.command_args;
+                    let sub_task_expected_args = sub_task.get_command_args();
                     for i in 0..sub_task_expected_args.len() {
                         let arg = &sub_task_expected_args[i];
                         let key = arg.get_name();
