@@ -22,6 +22,8 @@ Tasker is a task-runner/cli-as-code tool.
 - ~dry run support~
 - convert everything to try get matches
 - add CWD commands
+- add validate file command
+
 # assumptions
 - assume args are ordered to start
 

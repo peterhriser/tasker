@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use clap::ArgMatches;
 
 use crate::{
-    taskfile::{Taskfile, TaskStanza, CommandTypes},
+    taskfile::{CommandTypes, TaskStanza, Taskfile},
     utils::{iters::upsert_into_hash_map, strings::split_exclude_quotes},
 };
 use std::{
