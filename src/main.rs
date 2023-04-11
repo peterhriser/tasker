@@ -3,11 +3,11 @@ mod taskfile;
 mod tests;
 mod utils;
 
-use crate::taskfile::Taskfile;
+use crate::{taskfile::Taskfile, utils::errors::handle_user_facing_error};
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use run::TaskBuilder;
 use std::path::PathBuf;
-use utils::errors::DynamicError;
+use utils::errors::{ErrWithMessage, UserFacingError};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
@@ -37,11 +37,14 @@ struct CliArgs {
     dry_run: bool,
 }
 
-fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, DynamicError> {
+fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, UserFacingError> {
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config_path") {
         Some(fp) if fp.exists() => fp.to_string_lossy().to_string(),
         _ => {
-            return Err("Could not find valid Taskfile".into());
+            return Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
+                code: "INVALID_TASKFILE_PATH".to_string(),
+                messages: vec!["Taskfile does not exist".to_string()],
+            }))
         }
     };
     let config = Taskfile::new(config_path)?;
@@ -58,11 +61,17 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, DynamicErro
             runner.execute_tasks();
             Ok(true)
         }
-        _ => Err("Failed to execute task".into()),
+        _ => Err(UserFacingError::TaskExecutionError(ErrWithMessage {
+            code: "INVALID_DRY_RUN".to_string(),
+            messages: vec!["Invalid dry run value".to_string()],
+        })),
     };
 }
 
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
-    let _ = run_from_matches(initial_arg_matches);
+    match run_from_matches(initial_arg_matches) {
+        Ok(_) => println!("Task execution complete"),
+        Err(e) => handle_user_facing_error(e),
+    };
 }
