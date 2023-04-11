@@ -32,7 +32,7 @@ impl TaskStanza {
 #[cfg(test)]
 mod tests {
     use super::{TaskCmd, TaskStanza};
-    use crate::file_parsing::cmd::{CmdArg, CommandTypes};
+    use crate::taskfile::cmd::{CmdArg, CommandTypes};
 
     #[test]
     fn test_create_clap_subcommand() {
