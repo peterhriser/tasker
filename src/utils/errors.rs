@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use crate::taskfile::errors::TaskfileError;
+use crate::taskfile::TaskfileError;
 
 pub type DynamicError = Box<dyn Error>;
 

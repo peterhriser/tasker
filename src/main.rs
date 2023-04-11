@@ -3,7 +3,7 @@ mod taskfile;
 mod tests;
 mod utils;
 
-use crate::taskfile::taskfile::Taskfile;
+use crate::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use run::TaskBuilder;
 use std::path::PathBuf;
