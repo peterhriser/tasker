@@ -8,7 +8,7 @@ pub struct TaskStanza {
     pub name: String,
     pub commands: Vec<TaskCmd>,
     #[serde(rename(deserialize = "args"))]
-    pub command_args: Vec<CmdArg>,
+    command_args: Vec<CmdArg>,
     pub description: Option<String>,
 }
 
@@ -22,6 +22,10 @@ impl TaskStanza {
         let about = self.description.to_owned().unwrap_or_default();
         let base_command = clap::Command::new(&self.name).about(about).args(arg_vector);
         return base_command;
+    }
+
+    pub fn get_command_args(&self) -> &Vec<CmdArg> {
+        &self.command_args
     }
 }
 

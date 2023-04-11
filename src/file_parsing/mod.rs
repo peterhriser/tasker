@@ -1,3 +1,4 @@
-pub(super) mod cmd;
-pub(super) mod taskfile;
-pub(super) mod taskstanza;
+pub mod cmd;
+pub mod errors;
+pub mod taskfile;
+pub mod taskstanza;

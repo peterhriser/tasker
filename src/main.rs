@@ -5,8 +5,9 @@ mod utils;
 
 use crate::file_parsing::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
-use runners::builder::TaskBuilder;
-use std::{error::Error, path::PathBuf};
+use runners::TaskBuilder;
+use std::path::PathBuf;
+use utils::errors::DynamicError;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
@@ -36,7 +37,7 @@ struct CliArgs {
     dry_run: bool,
 }
 
-fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, Box<dyn Error>> {
+fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, DynamicError> {
     let config_path = match initial_arg_matches.get_one::<PathBuf>("config_path") {
         Some(fp) if fp.exists() => fp.to_string_lossy().to_string(),
         _ => {

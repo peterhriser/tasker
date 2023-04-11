@@ -2,19 +2,6 @@ use std::fmt;
 
 use serde::{de::Visitor, Deserialize, Deserializer};
 
-#[derive(Debug)]
-pub(super) struct ArgError {
-    pub(crate) message: String,
-}
-
-impl std::error::Error for ArgError {}
-
-impl std::fmt::Display for ArgError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Missing Value: {}", self.message)
-    }
-}
-
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum CommandTypes {
@@ -138,13 +125,7 @@ mod tests {
         assert_eq!(clap_arg.is_required_set(), false);
         assert_eq!(clap_arg.get_default_values(), &["default"]);
     }
-    #[test]
-    fn test_display_arg_error() {
-        let arg_error = super::ArgError {
-            message: "test".to_string(),
-        };
-        assert_eq!(arg_error.to_string(), "Missing Value: test");
-    }
+
     #[test]
     fn test_display_command_types() {
         let task = super::CommandTypes::Task("task".to_string());

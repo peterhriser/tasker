@@ -1,7 +1,9 @@
-use std::fmt;
+use std::{error::Error, fmt};
+
+pub type DynamicError = Box<dyn Error>;
 
 fn print_error() {
-    println!("Error: No Valid Taskfile found");
+    println!("Error!");
 }
 #[derive(Debug)]
 pub enum UserFacingError {
