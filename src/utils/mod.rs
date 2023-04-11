@@ -1,4 +1,5 @@
 // TODO make this a crate
+pub mod errors;
 pub mod iters;
 pub mod strings;
 pub mod test_helpers;

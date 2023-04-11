@@ -6,13 +6,13 @@ mod utils;
 use crate::file_parsing::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
 use runners::builder::TaskBuilder;
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
 struct CliArgs {
-    #[arg(default_value = "Taskfile", short, long, help="file path to load tasks from", value_parser=value_parser!(PathBuf))]
-    config: PathBuf,
+    #[arg(default_value = "Taskfile", short, long="config", help="path to file with task definitions", value_parser=value_parser!(PathBuf))]
+    config_path: PathBuf,
 
     #[arg(
         trailing_var_arg = true,
@@ -35,39 +35,32 @@ struct CliArgs {
     )]
     dry_run: bool,
 }
-fn print_error() -> Result<(), ()> {
-    println!("Error: No Valid Taskfile found");
-    let mut cmd = CliArgs::command();
-    println!("yeet: \n\n\n\n\n\n");
-    let help = cmd.render_help().to_string();
-    if !cfg!(test) {
-        println!("{}", help);
-    }
-    return Err(());
-}
-fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<(), ()> {
-    let config_path = match initial_arg_matches.get_one::<PathBuf>("config") {
-        Some(fp) if fp.exists() => fp.to_str().unwrap().to_string(),
-        Some(_) => return print_error(),
-        None => return print_error(),
+
+fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, Box<dyn Error>> {
+    let config_path = match initial_arg_matches.get_one::<PathBuf>("config_path") {
+        Some(fp) if fp.exists() => fp.to_string_lossy().to_string(),
+        _ => {
+            return Err("Could not find valid Taskfile".into());
+        }
     };
-    let config = Taskfile::new(config_path).unwrap();
-    // clap will catch any missing or bad args
+    let config = Taskfile::new(config_path)?;
 
     let mut builder = TaskBuilder::new(config);
     let dry_run = initial_arg_matches.get_one::<bool>("dry_run");
     let runner = builder.create_task_runner(initial_arg_matches.to_owned());
-    match dry_run {
+    return match dry_run {
         Some(true) => {
             runner.print_commands();
+            Ok(false)
         }
         Some(false) => {
             runner.execute_tasks();
+            Ok(true)
         }
-        _ => (),
-    }
-    return Ok(());
+        _ => Err("Failed to execute task".into()),
+    };
 }
+
 fn main() {
     let initial_arg_matches = CliArgs::command().get_matches();
     let _ = run_from_matches(initial_arg_matches);
