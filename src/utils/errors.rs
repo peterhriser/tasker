@@ -1,5 +1,7 @@
 use std::{error::Error, fmt};
 
+use crate::taskfile::errors::TaskfileError;
+
 pub type DynamicError = Box<dyn Error>;
 
 fn print_error() {
@@ -31,18 +33,14 @@ impl fmt::Display for UserFacingError {
         }
     }
 }
-// TODO: Implement From trait for all errors surfaced
-//  impl From<reqwest::Error> for MyCustomError {
-//    fn from(_: reqwest::Error) -> Self {
-//      MyCustomError::HttpError
-//    }
-//  }
-
-//  impl From<chrono::format::ParseError> for MyCustomError {
-//    fn from(_: chrono::format::ParseError) -> Self {
-//      MyCustomError::ParseError
-//    }
-//  }
+impl From<TaskfileError> for UserFacingError {
+    fn from(error: TaskfileError) -> Self {
+        match error {
+            TaskfileError::FileNotFound => UserFacingError::TaskfileDoesNotExist,
+            TaskfileError::FileParseError => UserFacingError::TaskfileParseError,
+        }
+    }
+}
 fn handle_user_facing_error(error: UserFacingError) {
     match error {
         UserFacingError::TaskfileDoesNotExist => print_error(),

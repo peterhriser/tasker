@@ -1,11 +1,11 @@
-mod file_parsing;
-mod runners;
+mod run;
+mod taskfile;
 mod tests;
 mod utils;
 
-use crate::file_parsing::taskfile::Taskfile;
+use crate::taskfile::taskfile::Taskfile;
 use clap::{value_parser, ArgMatches, CommandFactory, Parser};
-use runners::TaskBuilder;
+use run::TaskBuilder;
 use std::path::PathBuf;
 use utils::errors::DynamicError;
 
