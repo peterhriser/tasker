@@ -1,9 +1,10 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::taskstanza::TaskStanza;
+use super::{errors::TaskfileError, taskstanza::TaskStanza};
 
 type TaskContext = HashMap<String, String>;
+
 // Taskfile File made from assembling above structs
 #[derive(Deserialize, Clone)]
 pub struct Taskfile {
@@ -12,9 +13,9 @@ pub struct Taskfile {
 }
 
 impl Taskfile {
-    pub fn new(file_path: String) -> Result<Taskfile, std::io::Error> {
-        let file = std::fs::File::open(file_path).unwrap();
-        let base_deserialized_config: Taskfile = serde_yaml::from_reader(file).unwrap();
+    pub fn new(file_path: String) -> Result<Taskfile, TaskfileError> {
+        let file = std::fs::File::open(file_path)?;
+        let base_deserialized_config: Taskfile = serde_yaml::from_reader(file)?;
         Ok(base_deserialized_config)
     }
     pub fn get_task_by_name(&self, name: &str) -> Option<&TaskStanza> {
