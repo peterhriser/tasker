@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
-use clap::ArgMatches;
-
+pub mod errors;
+use self::errors::ExecutionError;
 use crate::{
     taskfile::{CommandTypes, TaskStanza, Taskfile},
-    utils::{iters::upsert_into_hash_map, strings::split_exclude_quotes},
+    utils::{errors::ErrWithMessage, iters::upsert_into_hash_map, strings::split_exclude_quotes},
 };
+use clap::ArgMatches;
+use std::collections::HashMap;
 use std::{
     io::{stdout, BufRead, BufReader, Write},
     process::{Command, Stdio},
@@ -14,12 +14,11 @@ use std::{
 pub struct TaskRunner {
     commands: Vec<String>,
 }
-
 impl TaskRunner {
     pub fn new(commands: Vec<String>) -> Self {
         Self { commands }
     }
-    pub fn call_command(mut command: Command) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
         let cmd_stdout = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -36,27 +35,42 @@ impl TaskRunner {
 
         Ok(())
     }
-    pub fn parse_command_from_string(command: String) -> Command {
+    pub fn parse_command_from_string(command: String) -> Result<Command, ExecutionError> {
         let mut parts = command.split_whitespace();
-        let command_name = parts.next().expect("no command specified");
+        let command_name = match parts.next() {
+            Some(cmd) => cmd,
+            None => {
+                return Err(ExecutionError::CommandNotFound(ErrWithMessage {
+                    messages: vec![format!(
+                        "command could not be parsed from cmd string: {}",
+                        command
+                    )
+                    .to_string()],
+                    code: "MISSING_CMD".to_string(),
+                }))
+            }
+        };
         let args = parts;
 
         let mut cmd = Command::new(command_name);
         cmd.args(args);
-        cmd
+        Ok(cmd)
     }
-    fn parse_strings_into_commands(&self) -> Vec<Command> {
+    fn parse_strings_into_commands(&self) -> Result<Vec<Command>, ExecutionError> {
         let commands = self.commands.clone();
-        return commands
-            .into_iter()
-            .map(|cmd| Self::parse_command_from_string(cmd))
-            .collect();
-    }
-    pub fn execute_tasks(&self) {
-        let commands = self.parse_strings_into_commands();
+        let mut parsed_commands = vec![];
         for cmd in commands {
-            Self::call_command(cmd).expect("Error Executing Command");
+            let parsed_cmd = Self::parse_command_from_string(cmd)?;
+            parsed_commands.push(parsed_cmd);
         }
+        return Ok(parsed_commands);
+    }
+    pub fn execute_tasks(&self) -> Result<(), ExecutionError> {
+        let commands = self.parse_strings_into_commands()?;
+        for cmd in commands {
+            Self::call_command(cmd)?
+        }
+        Ok(())
     }
     pub fn print_commands(&self) {
         for i in 0..self.commands.len() {
@@ -269,6 +283,7 @@ mod tests {
         let cmd = TaskRunner::parse_command_from_string(
             "echo \"beginning is here\" \"end is here\"".to_string(),
         );
+        let cmd = cmd.unwrap();
         assert_eq!(cmd.get_program(), "echo");
         let args = cmd.get_args();
         let mut arg_list = vec![];
