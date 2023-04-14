@@ -58,7 +58,7 @@ fn run_from_matches(initial_arg_matches: ArgMatches) -> Result<bool, UserFacingE
             Ok(false)
         }
         Some(false) => {
-            runner.execute_tasks();
+            runner.execute_tasks()?;
             Ok(true)
         }
         _ => Err(UserFacingError::TaskExecutionError(ErrWithMessage {

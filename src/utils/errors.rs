@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use crate::taskfile::TaskfileError;
+use crate::{run::errors::ExecutionError, taskfile::TaskfileError};
 
 #[derive(Debug)]
 // todo: make this have a trace
@@ -65,6 +65,17 @@ impl From<TaskfileError> for UserFacingError {
                 e.add_to_stack("Taskfile encountered parsing issue".to_string());
                 UserFacingError::TaskfileParseError(e)
             }
+        }
+    }
+}
+impl From<ExecutionError> for UserFacingError {
+    fn from(error: ExecutionError) -> Self {
+        match error {
+            ExecutionError::CommandFailed(mut e) => {
+                e.add_to_stack("Command failed to execute".to_string());
+                UserFacingError::TaskExecutionError(e)
+            }
+            ExecutionError::CommandNotFound(_) => todo!(),
         }
     }
 }
