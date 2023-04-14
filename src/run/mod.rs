@@ -7,7 +7,7 @@ use crate::{
 use clap::ArgMatches;
 use std::collections::HashMap;
 use std::{
-    io::{stdout, BufRead, BufReader, Write},
+    io::{BufRead, BufReader},
     process::{Command, Stdio},
 };
 
@@ -19,19 +19,45 @@ impl TaskRunner {
         Self { commands }
     }
     pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
-        let cmd_stdout = command
+        let cmd = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()?
-            .stdout
-            .unwrap();
+            .spawn()?;
+        let output = cmd.wait_with_output()?;
+        let mut stdout_reader = BufReader::new(output.stdout.as_slice()).lines();
+        let mut stderr_reader = BufReader::new(output.stderr.as_slice()).lines();
 
-        let reader = BufReader::new(cmd_stdout);
-
-        BufRead::lines(reader).for_each(|line| {
-            Write::flush(&mut stdout()).unwrap();
-            println!("> {}", line.unwrap())
-        });
+        loop {
+            let stdout_line = stdout_reader.next();
+            let stderr_line = stderr_reader.next();
+            if stderr_line.is_none() && stdout_line.is_none() {
+                break;
+            };
+            if stdout_line.is_some() {
+                match stdout_line.unwrap() {
+                    Ok(line) => {
+                        println!("> {}", line);
+                    }
+                    Err(e) => {
+                        println!("Error reading stdout: {}", e);
+                        break;
+                    }
+                }
+            }
+            if stderr_line.is_some() {
+                if !output.status.success() {
+                    match stderr_line.unwrap() {
+                        Ok(line) => {
+                            println!("}}> {}", line);
+                        }
+                        Err(e) => {
+                            println!("Error reading stderr: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
