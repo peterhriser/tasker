@@ -73,3 +73,86 @@ pub fn handle_user_facing_error(error: UserFacingError) {
         _ => println!("{}", error.to_string()),
     }
 }
+impl UserFacingError {
+    pub fn add_to_error_stack(&mut self, message: String) {
+        match self {
+            UserFacingError::TaskfileDoesNotExist(e) => e.add_to_stack(message),
+            UserFacingError::TaskfileParseError(e) => e.add_to_stack(message),
+            UserFacingError::TaskDoesNotExist(e) => e.add_to_stack(message),
+            UserFacingError::TaskExecutionError(e) => e.add_to_stack(message),
+            UserFacingError::MissingContext(e) => e.add_to_stack(message),
+            UserFacingError::MissingVariable(e) => e.add_to_stack(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::utils::errors::{ErrWithMessage, UserFacingError};
+
+    #[test]
+    fn test_display_user_facing_error() {
+        let error = UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
+            code: "FILE_ERROR".to_string(),
+            messages: vec!["File does not exist".to_string()],
+        });
+        assert_eq!(
+            error.to_string(),
+            "\x1b[31mFILE_ERROR\x1b[0m: File does not exist"
+        );
+    }
+
+    #[test]
+    fn test_display_user_facing_error_with_stack() {
+        let err = ErrWithMessage {
+            code: "FILE_ERROR".to_string(),
+            messages: vec!["File does not exist".to_string()],
+        };
+        let mut full_error = UserFacingError::TaskfileDoesNotExist(err);
+        full_error.add_to_error_stack("Taskfile could not be found".to_string());
+        assert_eq!(
+            full_error.to_string(),
+            "\x1b[31mFILE_ERROR\x1b[0m: Taskfile could not be found\n>    File does not exist"
+        );
+    }
+    #[test]
+    fn test_from_execution_error() {
+        let error = UserFacingError::from(crate::taskfile::TaskfileError::FileParseError(
+            ErrWithMessage {
+                code: "FILE_ERROR".to_string(),
+                messages: vec!["File does not exist".to_string()],
+            },
+        ));
+        assert_eq!(
+            error.to_string(),
+            "\x1b[31mFILE_ERROR\x1b[0m: Taskfile encountered parsing issue\n>    File does not exist"
+        );
+    }
+    #[test]
+    fn test_from_taskfile_error() {
+        let error = UserFacingError::from(crate::taskfile::TaskfileError::FileNotFound(
+            ErrWithMessage {
+                code: "FILE_ERROR".to_string(),
+                messages: vec!["File does not exist".to_string()],
+            },
+        ));
+        assert_eq!(
+            error.to_string(),
+            "\x1b[31mFILE_ERROR\x1b[0m: Taskfile could not be found\n>    File does not exist"
+        );
+    }
+    #[test]
+    fn test_from_taskfile_error_with_stack() {
+        let err = ErrWithMessage {
+            code: "FILE_ERROR".to_string(),
+            messages: vec!["File does not exist".to_string()],
+        };
+        let mut full_error =
+            UserFacingError::from(crate::taskfile::TaskfileError::FileNotFound(err));
+        full_error.add_to_error_stack("Taskfile could not be found".to_string());
+        assert_eq!(
+            full_error.to_string(),
+            "\x1b[31mFILE_ERROR\x1b[0m: Taskfile could not be found\n>    Taskfile could not be found\n>    File does not exist"
+        );
+    }
+}

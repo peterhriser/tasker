@@ -351,4 +351,13 @@ mod tests {
         assert_eq!(commands[0], "echo Hello Foo Bar");
         assert_eq!(commands[1], "echo Hello Bar Foo");
     }
+
+    #[test]
+    fn test_error_on_missing_arg() {
+        let mut runner = TaskBuilder::new(load_from_string());
+        let task = runner.get_config().get_task_by_name("test-task").unwrap();
+        let commands = runner.get_all_commands_parsed(task.to_owned(), HashMap::new());
+        assert_eq!(commands[0], "echo Hello Foo Bar");
+        assert_eq!(commands[1], "echo Hello Bar Foo");
+    }
 }
