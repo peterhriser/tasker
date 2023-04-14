@@ -34,10 +34,10 @@ impl Display for ErrWithMessage {
 pub enum UserFacingError {
     TaskfileDoesNotExist(ErrWithMessage), // Missing File Error
     TaskfileParseError(ErrWithMessage),   // Invalid YAML Error
-    TaskDoesNotExist(ErrWithMessage),     // Referencing non-existing task
-    TaskExecutionError(ErrWithMessage),   // Command in task failed to run
-    MissingContext(ErrWithMessage),       // Referencing non-existing context
-    MissingVariable(ErrWithMessage),      // Variable value could not be found
+    // TaskDoesNotExist(ErrWithMessage),     // Referencing non-existing task
+    TaskExecutionError(ErrWithMessage), // Command in task failed to run
+                                        // MissingContext(ErrWithMessage),       // Referencing non-existing context
+                                        // MissingVariable(ErrWithMessage),      // Variable value could not be found
 }
 
 impl std::error::Error for UserFacingError {}
@@ -47,10 +47,10 @@ impl fmt::Display for UserFacingError {
         match self {
             UserFacingError::TaskfileDoesNotExist(e) => write!(f, "{}", e.to_string()),
             UserFacingError::TaskfileParseError(e) => write!(f, "{}", e.to_string()),
-            UserFacingError::TaskDoesNotExist(e) => write!(f, "{}", e.to_string()),
+            // UserFacingError::TaskDoesNotExist(e) => write!(f, "{}", e.to_string()),
             UserFacingError::TaskExecutionError(e) => write!(f, "{}", e.to_string()),
-            UserFacingError::MissingContext(e) => write!(f, "{}", e.to_string()),
-            UserFacingError::MissingVariable(e) => write!(f, "{}", e.to_string()),
+            // UserFacingError::MissingContext(e) => write!(f, "{}", e.to_string()),
+            // UserFacingError::MissingVariable(e) => write!(f, "{}", e.to_string()),
         }
     }
 }
@@ -78,10 +78,10 @@ impl UserFacingError {
         match self {
             UserFacingError::TaskfileDoesNotExist(e) => e.add_to_stack(message),
             UserFacingError::TaskfileParseError(e) => e.add_to_stack(message),
-            UserFacingError::TaskDoesNotExist(e) => e.add_to_stack(message),
+            // UserFacingError::TaskDoesNotExist(e) => e.add_to_stack(message),
             UserFacingError::TaskExecutionError(e) => e.add_to_stack(message),
-            UserFacingError::MissingContext(e) => e.add_to_stack(message),
-            UserFacingError::MissingVariable(e) => e.add_to_stack(message),
+            // UserFacingError::MissingContext(e) => e.add_to_stack(message),
+            // UserFacingError::MissingVariable(e) => e.add_to_stack(message),
         }
     }
 }
