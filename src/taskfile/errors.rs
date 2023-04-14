@@ -31,3 +31,25 @@ impl From<serde_yaml::Error> for TaskfileError {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_from_io_error() {
+        let error = std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist");
+        let taskfile_error = super::TaskfileError::from(error);
+        assert_eq!(
+            taskfile_error.to_string(),
+            "Taskfile does not exist:\n    \u{1b}[31mFILE_ERROR\u{1b}[0m: File does not exist"
+        )
+    }
+    #[test]
+    fn test_from_yaml_error() {
+        let error: serde_yaml::Result<Vec<String>> = serde_yaml::from_str("invalid yaml");
+        let taskfile_error = super::TaskfileError::from(error.unwrap_err());
+        assert_eq!(
+            taskfile_error.to_string(),
+            "Taskfile Parsing Error:\n    \u{1b}[31mYAML_PARSE_ERROR\u{1b}[0m: invalid type: string \"invalid yaml\", expected a sequence"
+        )
+    }
+}
