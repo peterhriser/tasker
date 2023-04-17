@@ -1,0 +1,34 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup update stable
+      - name: Build Release
+        run: cargo build --release
+      - name: Get Version
+        id: Version
+        run: |
+          echo "VERSION=$(./target/release/tasker --version | awk '{print $NF}')" >> $GITHUB_OUTPUT
+      - name: Get Shasum
+        id: sha
+        run: |
+          echo "SHASUM=$(shasum -a 256 filename/path)" >> $GITHUB_OUTPUT
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          body: |
+            SHASUM: ${{ steps.sha.outputs.TAG_NAME }}
+          files: |
+            target/release/tasker
