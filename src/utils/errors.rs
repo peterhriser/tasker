@@ -89,6 +89,8 @@ impl From<clap::Error> for UserFacingError {
         }
     }
 }
+
+
 impl UserFacingError {
     pub fn add_to_error_stack(&mut self, message: String) {
         match self {
