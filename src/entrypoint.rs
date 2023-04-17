@@ -1,48 +1,38 @@
+use crate::cliargs::CliArgs;
 use crate::run::TaskBuilder;
 use crate::taskfile::Taskfile;
 use crate::utils::errors::{ErrWithMessage, UserFacingError};
-use clap::{value_parser, ArgMatches, CommandFactory, Parser};
+use clap::{ArgMatches, CommandFactory};
 use std::path::PathBuf;
-
-#[derive(Parser)]
-#[command(author, version, about, long_about = None, arg_required_else_help(true), trailing_var_arg=true )]
-struct CliArgs {
-    #[arg(default_value = "Taskfile", short, long="config", help="path to file with task definitions", value_parser=value_parser!(PathBuf))]
-    config_path: PathBuf,
-
-    #[arg(
-        trailing_var_arg = true,
-        allow_hyphen_values = true,
-        default_value = "help",
-        help = "commands defined by Taskfile"
-    )]
-    task_info: Vec<String>,
-
-    #[arg(
-        short = 'x',
-        long = "context",
-        help = "execution context to load for command"
-    )]
-    context: Option<String>,
-    #[arg(
-        short,
-        long,
-        help = "print out the commands that would be run instead of executing them"
-    )]
-    dry_run: bool,
-}
 
 pub(crate) struct EntryPoint {
     initial_arg_matches: ArgMatches,
 }
 impl EntryPoint {
-    pub fn new() -> EntryPoint {
-        EntryPoint {
-            initial_arg_matches: EntryPoint::get_matches(),
-        }
+    pub fn new(cli_input: Option<Vec<&str>>) -> Result<EntryPoint, UserFacingError> {
+        let matches = EntryPoint::get_matches(cli_input)?;
+        Ok(EntryPoint {
+            initial_arg_matches: matches,
+        })
     }
-    fn get_matches() -> ArgMatches {
-        CliArgs::command().get_matches()
+    fn get_matches(cli_input: Option<Vec<&str>>) -> Result<ArgMatches, UserFacingError> {
+        let cmd = CliArgs::command();
+        return match cli_input {
+            Some(args) => match cmd.try_get_matches_from(args) {
+                Ok(matches) => Ok(matches),
+                Err(e) => Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
+                    code: "INVALID_TASKFILE_PATH".to_string(),
+                    messages: vec![e.to_string()],
+                })),
+            },
+            None => match cmd.try_get_matches() {
+                Ok(matches) => Ok(matches),
+                Err(e) => Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
+                    code: "INVALID_TASKFILE_PATH".to_string(),
+                    messages: vec![e.to_string()],
+                })),
+            },
+        };
     }
     fn get_config_path(&self) -> Result<String, UserFacingError> {
         let config_path = match self.initial_arg_matches.get_one::<PathBuf>("config_path") {
@@ -94,5 +84,91 @@ pub fn handle_result(result: Result<bool, UserFacingError>) {
             eprintln!("{}", e);
             std::process::exit(1);
         }
+    }
+}
+#[cfg(test)]
+mod integration_tests {
+    use crate::{cliargs::CliArgs, entrypoint::EntryPoint};
+    use clap::{CommandFactory, FromArgMatches};
+
+    #[test]
+    fn test_entry_point() {
+        let ep = EntryPoint {
+            initial_arg_matches: CliArgs::command().get_matches_from(vec![
+                "tasker",
+                "-c",
+                "src/tests/Taskfile",
+                "greet",
+                "Peter",
+            ]),
+        };
+        let result = ep.run();
+        assert!(result.is_ok())
+    }
+    #[test]
+    fn test_from_arg_matches() {
+        let initial_arg_matches = CliArgs::command().get_matches_from(vec![
+            "tasker",
+            "-c",
+            "src/tests/Taskfile",
+            "greet",
+            "Peter",
+        ]);
+        let new_argmatches = CliArgs::from_arg_matches(&initial_arg_matches).unwrap();
+        assert!(new_argmatches.config_path.exists());
+    }
+    #[test]
+    fn test_new_empty() {
+        let ep = EntryPoint::new(None);
+        assert!(ep.is_err());
+    }
+    #[test]
+    fn test_new_with_vec() {
+        let ep = EntryPoint::new(Some(vec![
+            "tasker",
+            "-c",
+            "src/tests/Taskfile",
+            "greet",
+            "Peter",
+        ]));
+        assert!(ep.is_ok());
+    }
+    #[test]
+    fn test_missing_file() {
+        let ep = EntryPoint {
+            initial_arg_matches: CliArgs::command().get_matches_from(vec![
+                "tasker",
+                "-c",
+                "src/tests/NotTaskfile",
+                "greet",
+                "Peter",
+            ]),
+        };
+        let result = ep.run();
+        assert!(result.is_err())
+    }
+    #[test]
+    fn test_dry_run() {
+        let ep = EntryPoint {
+            initial_arg_matches: CliArgs::command().get_matches_from(vec![
+                "tasker",
+                "-c",
+                "src/tests/Taskfile",
+                "--dry-run",
+                "greet",
+                "Peter",
+            ]),
+        };
+        assert!(ep.is_dry_run().unwrap());
+        let ep = EntryPoint {
+            initial_arg_matches: CliArgs::command().get_matches_from(vec![
+                "tasker",
+                "-c",
+                "src/tests/Taskfile",
+                "greet",
+                "Peter",
+            ]),
+        };
+        assert!(!ep.is_dry_run().unwrap());
     }
 }

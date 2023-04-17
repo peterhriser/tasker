@@ -79,9 +79,14 @@ impl From<ExecutionError> for UserFacingError {
         }
     }
 }
-pub fn handle_user_facing_error(error: UserFacingError) {
-    match error {
-        _ => println!("{}", error.to_string()),
+impl From<clap::Error> for UserFacingError {
+    fn from(error: clap::error::Error) -> Self {
+        match error.kind() {
+            clap::error::ErrorKind::DisplayHelp => todo!(),
+            clap::error::ErrorKind::DisplayVersion => todo!(),
+            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => todo!(),
+            _ => todo!(),
+        }
     }
 }
 impl UserFacingError {
