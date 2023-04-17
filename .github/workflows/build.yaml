@@ -1,13 +1,11 @@
 
 name: Build
-
 on:
   push:
     branches:
       - main
-
 jobs:
-  coverage:
+  build:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
