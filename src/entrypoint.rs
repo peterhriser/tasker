@@ -105,15 +105,14 @@ mod integration_tests {
 
     #[test]
     fn test_entry_point() {
-        let ep = EntryPoint {
-            initial_arg_matches: CliArgs::command().get_matches_from(vec![
-                "tasker",
-                "-c",
-                "src/tests/Taskfile",
-                "greet",
-                "Peter",
-            ]),
-        };
+        let ep = EntryPoint::new(Some(vec![
+            "tasker",
+            "-c",
+            "src/tests/Taskfile",
+            "greet",
+            "Peter",
+        ]))
+        .unwrap();
         let result = ep.run();
         assert!(result.is_ok())
     }

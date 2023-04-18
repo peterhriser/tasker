@@ -246,7 +246,7 @@ impl TaskBuilder {
     ) -> Result<Vec<String>, UserFacingError> {
         let cli_inputs = self.parse_cli_inputs(&initial_arg_matches)?;
         let context_name = self.get_context_from_matches(&initial_arg_matches);
-        let task_name = self.get_task_name_from_matches(&initial_arg_matches);
+        let task_name = self.get_task_name_from_matches(&cli_inputs);
         let (selected_task, selected_context) =
             self.gather_task_info_from_cli(&task_name, context_name);
 
