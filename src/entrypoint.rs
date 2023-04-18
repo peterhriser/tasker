@@ -27,10 +27,7 @@ impl EntryPoint {
             },
             None => match cmd.try_get_matches() {
                 Ok(matches) => Ok(matches),
-                Err(e) => Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
-                    code: "INVALID_TASKFILE_PATH".to_string(),
-                    messages: vec![e.to_string()],
-                })),
+                Err(e) => return Err(e.into()),
             },
         };
     }
@@ -58,7 +55,7 @@ impl EntryPoint {
         let config = Taskfile::new(config_path)?;
         let mut builder = TaskBuilder::new(config);
         let dry_run = self.is_dry_run()?;
-        let runner = builder.create_task_runner(self.initial_arg_matches.to_owned());
+        let runner = builder.create_task_runner(self.initial_arg_matches.to_owned())?;
         return match dry_run {
             true => {
                 runner.print_commands();
@@ -80,10 +77,25 @@ pub fn handle_result(result: Result<bool, UserFacingError>) {
         Ok(false) => {
             println!("Task completed successfully (dry run)");
         }
-        Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(1);
-        }
+        Err(e) => match e {
+            UserFacingError::TaskfileDoesNotExist(e) => {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+            UserFacingError::TaskfileParseError(e) => {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+            UserFacingError::TaskExecutionError(_) => todo!(),
+            UserFacingError::MissingArgError(_) => {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+            UserFacingError::TaskDoesNotExist(_) => {
+                CliArgs::command().print_long_help().unwrap();
+                std::process::exit(1);
+            }
+        },
     }
 }
 #[cfg(test)]

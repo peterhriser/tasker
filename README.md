@@ -24,6 +24,9 @@ Tasker is a task-runner/cli-as-code tool.
 - add CWD commands
 - add validate file command
 - improve capturing shell commands to support pipes, etc
+- support Global taskfile reference (i.e calling tasker from anywhere defaults to one in home)
+- tasker setting file in home
+
 # assumptions
 - assume args are ordered to start
 

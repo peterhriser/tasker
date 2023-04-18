@@ -34,10 +34,9 @@ impl Display for ErrWithMessage {
 pub enum UserFacingError {
     TaskfileDoesNotExist(ErrWithMessage), // Missing File Error
     TaskfileParseError(ErrWithMessage),   // Invalid YAML Error
-    // TaskDoesNotExist(ErrWithMessage),     // Referencing non-existing task
-    TaskExecutionError(ErrWithMessage), // Command in task failed to run
-                                        // MissingContext(ErrWithMessage),       // Referencing non-existing context
-                                        // MissingVariable(ErrWithMessage),      // Variable value could not be found
+    TaskExecutionError(ErrWithMessage),   // Command in task failed to run
+    MissingArgError(ErrWithMessage),      // Missing argument
+    TaskDoesNotExist(ErrWithMessage),     // Task does not exist
 }
 
 impl std::error::Error for UserFacingError {}
@@ -47,10 +46,9 @@ impl fmt::Display for UserFacingError {
         match self {
             UserFacingError::TaskfileDoesNotExist(e) => write!(f, "{}", e.to_string()),
             UserFacingError::TaskfileParseError(e) => write!(f, "{}", e.to_string()),
-            // UserFacingError::TaskDoesNotExist(e) => write!(f, "{}", e.to_string()),
             UserFacingError::TaskExecutionError(e) => write!(f, "{}", e.to_string()),
-            // UserFacingError::MissingContext(e) => write!(f, "{}", e.to_string()),
-            // UserFacingError::MissingVariable(e) => write!(f, "{}", e.to_string()),
+            UserFacingError::MissingArgError(e) => write!(f, "{}", e.to_string()),
+            UserFacingError::TaskDoesNotExist(e) => write!(f, "{}", e.to_string()),
         }
     }
 }
@@ -84,21 +82,13 @@ impl From<clap::Error> for UserFacingError {
         match error.kind() {
             clap::error::ErrorKind::DisplayHelp => todo!(),
             clap::error::ErrorKind::DisplayVersion => todo!(),
-            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => todo!(),
+            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+                UserFacingError::TaskDoesNotExist(ErrWithMessage {
+                    code: "TASK_ERROR".to_string(),
+                    messages: vec![error.to_string()],
+                })
+            }
             _ => todo!(),
-        }
-    }
-}
-
-impl UserFacingError {
-    pub fn add_to_error_stack(&mut self, message: String) {
-        match self {
-            UserFacingError::TaskfileDoesNotExist(e) => e.add_to_stack(message),
-            UserFacingError::TaskfileParseError(e) => e.add_to_stack(message),
-            // UserFacingError::TaskDoesNotExist(e) => e.add_to_stack(message),
-            UserFacingError::TaskExecutionError(e) => e.add_to_stack(message),
-            // UserFacingError::MissingContext(e) => e.add_to_stack(message),
-            // UserFacingError::MissingVariable(e) => e.add_to_stack(message),
         }
     }
 }
@@ -106,6 +96,20 @@ impl UserFacingError {
 #[cfg(test)]
 mod test {
     use crate::utils::errors::{ErrWithMessage, UserFacingError};
+
+    impl UserFacingError {
+        pub fn add_to_error_stack(&mut self, message: String) {
+            match self {
+                UserFacingError::TaskfileDoesNotExist(e) => e.add_to_stack(message),
+                UserFacingError::TaskfileParseError(e) => e.add_to_stack(message),
+                // UserFacingError::TaskDoesNotExist(e) => e.add_to_stack(message),
+                UserFacingError::TaskExecutionError(e) => e.add_to_stack(message),
+                // UserFacingError::MissingContext(e) => e.add_to_stack(message),
+                // UserFacingError::MissingVariable(e) => e.add_to_stack(message),
+                _ => todo!(),
+            }
+        }
+    }
 
     #[test]
     fn test_display_user_facing_error() {

@@ -2,7 +2,11 @@ pub mod errors;
 use self::errors::ExecutionError;
 use crate::{
     taskfile::{CommandTypes, TaskStanza, Taskfile},
-    utils::{errors::ErrWithMessage, iters::upsert_into_hash_map, strings::split_exclude_quotes},
+    utils::{
+        errors::{ErrWithMessage, UserFacingError},
+        iters::upsert_into_hash_map,
+        strings::split_exclude_quotes,
+    },
 };
 use clap::ArgMatches;
 use std::collections::HashMap;
@@ -188,27 +192,40 @@ impl TaskBuilder {
         // 1. cli input
         self.update_variables_from_arg_matches(&cli_inputs.subcommand_matches(&task_name).unwrap());
     }
+    fn get_context_from_matches(&self, matches: &ArgMatches) -> Option<String> {
+        let context_name = match matches.get_one::<String>("context") {
+            Some(context_name) => Some(context_name.to_string()),
+            None => return None,
+        };
+        return context_name;
+    }
+    fn get_task_name_from_matches(&self, sub_matches: &ArgMatches) -> String {
+        // get matches found so far and parse into subcommand
+        let (task_name, _) = sub_matches.subcommand().unwrap();
+        let task_name = task_name.to_string().to_owned();
+        return task_name;
+    }
     fn parse_cli_inputs(
         &mut self,
-        initial_arg_matches: ArgMatches,
-    ) -> (String, Option<String>, ArgMatches) {
-        // TODO: make this a function
-        let context_name = initial_arg_matches.get_one::<String>("context");
-        let context_name = match context_name {
-            Some(name) => Some(name.to_owned()),
-            None => None,
-        };
+        initial_arg_matches: &ArgMatches,
+    ) -> Result<ArgMatches, UserFacingError> {
         // we can be confident in unwraps since we verify most values above on load
         let raw_args: Vec<_> = initial_arg_matches
             .get_many::<String>("task_info")
             .unwrap()
             .collect();
 
-        let cli_inputs = self.clap_config.to_owned().get_matches_from(raw_args);
-        // get matches found so far and parse into subcommand
-        let (task_name, _) = cli_inputs.subcommand().unwrap();
-        let task_name = task_name.to_string().to_owned();
-        return (task_name, context_name, cli_inputs);
+        let cli_inputs = match self.clap_config.to_owned().try_get_matches_from(raw_args) {
+            Ok(cli_inputs) => cli_inputs,
+            Err(e) => {
+                return Err(UserFacingError::MissingArgError(ErrWithMessage {
+                    code: "MISSING_ARGUMENT".to_string(),
+                    messages: vec!["\n".to_owned() + &e.render().to_string()],
+                }))
+            }
+        };
+
+        return Ok(cli_inputs);
     }
 
     pub fn gather_task_info_from_cli(
@@ -223,14 +240,19 @@ impl TaskBuilder {
         return (selected_task.to_owned(), task_context.to_owned());
     }
 
-    pub fn create_command_strings(&mut self, initial_arg_matches: ArgMatches) -> Vec<String> {
-        let (task_name, context_name, cli_inputs) = self.parse_cli_inputs(initial_arg_matches);
+    pub fn create_command_strings(
+        &mut self,
+        initial_arg_matches: ArgMatches,
+    ) -> Result<Vec<String>, UserFacingError> {
+        let cli_inputs = self.parse_cli_inputs(&initial_arg_matches)?;
+        let context_name = self.get_context_from_matches(&initial_arg_matches);
+        let task_name = self.get_task_name_from_matches(&initial_arg_matches);
         let (selected_task, selected_context) =
             self.gather_task_info_from_cli(&task_name, context_name);
 
         self.load_variables(&selected_task, task_name, selected_context, cli_inputs);
         let cloned_vars = self.variable_lookup.clone();
-        return self.get_all_commands_parsed(selected_task, cloned_vars);
+        return Ok(self.get_all_commands_parsed(selected_task, cloned_vars));
     }
 
     fn get_all_commands_parsed(
@@ -284,10 +306,13 @@ impl TaskBuilder {
         }
         return commands;
     }
-    pub fn create_task_runner(&mut self, initial_arg_matches: ArgMatches) -> TaskRunner {
-        let commands = self.create_command_strings(initial_arg_matches);
+    pub fn create_task_runner(
+        &mut self,
+        initial_arg_matches: ArgMatches,
+    ) -> Result<TaskRunner, UserFacingError> {
+        let commands = self.create_command_strings(initial_arg_matches)?;
         let task_runner = TaskRunner::new(commands);
-        return task_runner;
+        return Ok(task_runner);
     }
     pub fn parse_task_name_from_string(parsed_command: &String) -> String {
         return split_exclude_quotes(parsed_command.to_string())[0].to_string();
