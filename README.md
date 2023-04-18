@@ -20,6 +20,10 @@ Tasker is a task-runner/cli-as-code tool.
     - compile yaml and code into dist?
 - add error handling configuration (on-fail: do x)
 - ~dry run support~
+- convert everything to try get matches
+- add CWD commands
+- add validate file command
+- improve capturing shell commands to support pipes, etc
 # assumptions
 - assume args are ordered to start
 

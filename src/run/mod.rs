@@ -1,13 +1,110 @@
-use std::collections::HashMap;
-
-use clap::ArgMatches;
-
+pub mod errors;
+use self::errors::ExecutionError;
 use crate::{
-    file_parsing::{taskfile::Taskfile, taskstanza::TaskStanza},
-    utils::{iters::upsert_into_hash_map, strings::split_exclude_quotes},
+    taskfile::{CommandTypes, TaskStanza, Taskfile},
+    utils::{errors::ErrWithMessage, iters::upsert_into_hash_map, strings::split_exclude_quotes},
+};
+use clap::ArgMatches;
+use std::collections::HashMap;
+use std::{
+    io::{BufRead, BufReader},
+    process::{Command, Stdio},
 };
 
-use super::runner::TaskRunner;
+pub struct TaskRunner {
+    commands: Vec<String>,
+}
+impl TaskRunner {
+    pub fn new(commands: Vec<String>) -> Self {
+        Self { commands }
+    }
+    pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
+        let cmd = command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        let output = cmd.wait_with_output()?;
+        let mut stdout_reader = BufReader::new(output.stdout.as_slice()).lines();
+        let mut stderr_reader = BufReader::new(output.stderr.as_slice()).lines();
+
+        loop {
+            let stdout_line = stdout_reader.next();
+            let stderr_line = stderr_reader.next();
+            if stderr_line.is_none() && stdout_line.is_none() {
+                break;
+            };
+            if stdout_line.is_some() {
+                match stdout_line.unwrap() {
+                    Ok(line) => {
+                        println!("> {}", line);
+                    }
+                    Err(e) => {
+                        println!("Error reading stdout: {}", e);
+                        break;
+                    }
+                }
+            }
+            if stderr_line.is_some() {
+                if !output.status.success() {
+                    match stderr_line.unwrap() {
+                        Ok(line) => {
+                            println!("}}> {}", line);
+                        }
+                        Err(e) => {
+                            println!("Error reading stderr: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+    pub fn parse_command_from_string(command: String) -> Result<Command, ExecutionError> {
+        let mut parts = command.split_whitespace();
+        let command_name = match parts.next() {
+            Some(cmd) => cmd,
+            None => {
+                return Err(ExecutionError::CommandNotFound(ErrWithMessage {
+                    messages: vec![format!(
+                        "command could not be parsed from cmd string: {}",
+                        command
+                    )
+                    .to_string()],
+                    code: "MISSING_CMD".to_string(),
+                }))
+            }
+        };
+        let args = parts;
+
+        let mut cmd = Command::new(command_name);
+        cmd.args(args);
+        Ok(cmd)
+    }
+    fn parse_strings_into_commands(&self) -> Result<Vec<Command>, ExecutionError> {
+        let commands = self.commands.clone();
+        let mut parsed_commands = vec![];
+        for cmd in commands {
+            let parsed_cmd = Self::parse_command_from_string(cmd)?;
+            parsed_commands.push(parsed_cmd);
+        }
+        return Ok(parsed_commands);
+    }
+    pub fn execute_tasks(&self) -> Result<(), ExecutionError> {
+        let commands = self.parse_strings_into_commands()?;
+        for cmd in commands {
+            Self::call_command(cmd)?
+        }
+        Ok(())
+    }
+    pub fn print_commands(&self) {
+        for i in 0..self.commands.len() {
+            println!("{:?}: {}", i, self.commands[i]);
+        }
+    }
+}
+
 pub struct TaskBuilder {
     config: Taskfile,
     variable_lookup: HashMap<String, String>,
@@ -31,13 +128,17 @@ impl TaskBuilder {
     // used for getting defaults and subtask values
     fn update_variables_from_task_stanza(&mut self, task: TaskStanza) {
         let mut local_variable_lookup = self.variable_lookup.clone();
-        for cmd in task.command_args {
-            let value = match cmd.default {
+        for cmd in task.get_command_args() {
+            let value = match cmd.get_default() {
                 Some(value) => value,
                 None => continue,
             };
-            let key = cmd.name;
-            upsert_into_hash_map(key, value, &mut local_variable_lookup);
+            let key = cmd.get_name();
+            upsert_into_hash_map(
+                key.to_string(),
+                value.to_string(),
+                &mut local_variable_lookup,
+            );
         }
         self.variable_lookup = local_variable_lookup;
     }
@@ -146,18 +247,18 @@ impl TaskBuilder {
             let raw_command = cmd.value.to_owned();
             match command_type {
                 // base case
-                crate::file_parsing::cmd::CommandTypes::Shell(_) => {
+                CommandTypes::Shell(_) => {
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     commands.push(parsed_command)
                 }
-                crate::file_parsing::cmd::CommandTypes::Task(_) => {
+                CommandTypes::Task(_) => {
                     // fill in variables, then recurse through the subtask
                     let parsed_command = Self::replace_string_with_args(raw_command, &local_vars);
                     let sub_task_name: String = Self::parse_task_name_from_string(&parsed_command);
                     let sub_task_supplied_args: Vec<String> =
                         Self::parse_task_args_from_string(&parsed_command);
                     let sub_task = self.config.get_task_by_name(&sub_task_name).unwrap();
-                    let sub_task_expected_args = &sub_task.command_args;
+                    let sub_task_expected_args = sub_task.get_command_args();
                     for i in 0..sub_task_expected_args.len() {
                         let arg = &sub_task_expected_args[i];
                         let key = arg.get_name();
@@ -178,7 +279,7 @@ impl TaskBuilder {
                         self.get_all_commands_parsed(sub_task.to_owned(), local_vars.to_owned()),
                     );
                 }
-                crate::file_parsing::cmd::CommandTypes::Script(_) => unimplemented!(),
+                _ => unimplemented!(),
             }
         }
         return commands;
@@ -198,10 +299,28 @@ impl TaskBuilder {
 #[cfg(test)]
 mod tests {
     use super::TaskBuilder;
+    use super::TaskRunner;
     use crate::utils::test_helpers::test_helpers::load_from_string;
     use clap::{value_parser, Arg, Command};
     use std::collections::HashMap;
 
+    #[test]
+    fn test_parse_command_from_string() {
+        let cmd = TaskRunner::parse_command_from_string(
+            "echo \"beginning is here\" \"end is here\"".to_string(),
+        );
+        let cmd = cmd.unwrap();
+        assert_eq!(cmd.get_program(), "echo");
+        let args = cmd.get_args();
+        let mut arg_list = vec![];
+        for arg in args {
+            arg_list.push(arg.to_string_lossy().to_string());
+        }
+        assert_eq!(
+            arg_list,
+            vec!["\"beginning", "is", "here\"", "\"end", "is", "here\""]
+        );
+    }
     #[test]
     fn test_update_variables_from_arg_matches() {
         let mut runner = TaskBuilder::new(load_from_string());
@@ -252,6 +371,15 @@ mod tests {
     }
     #[test]
     fn test_get_all_commands_parsed_with_task() {
+        let runner = TaskBuilder::new(load_from_string());
+        let task = runner.get_config().get_task_by_name("test-task").unwrap();
+        let commands = runner.get_all_commands_parsed(task.to_owned(), HashMap::new());
+        assert_eq!(commands[0], "echo Hello Foo Bar");
+        assert_eq!(commands[1], "echo Hello Bar Foo");
+    }
+
+    #[test]
+    fn test_error_on_missing_arg() {
         let runner = TaskBuilder::new(load_from_string());
         let task = runner.get_config().get_task_by_name("test-task").unwrap();
         let commands = runner.get_all_commands_parsed(task.to_owned(), HashMap::new());

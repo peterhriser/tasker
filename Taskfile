@@ -2,7 +2,6 @@ project: "Example"
 version: "1.0"
 author: "Peter"
 
-
 contexts:
   staging:
     name: Peter
@@ -10,12 +9,11 @@ contexts:
   prod:
     name: Peter "Lord DevOp"
 
-
 tasks:
   - name: greet
     commands:
-    - shell: echo Hello ${first_name} ${last_name}
-    - shell: echo Goodbye ${first_name} ${last_name}
+      - shell: echo Hello ${first_name} ${last_name}
+      - shell: echo Goodbye ${first_name} ${last_name}
     description: "greets a user by name"
     args:
       - name: first_name
@@ -24,16 +22,30 @@ tasks:
         type: string
         default: "the First"
 
+  - name: my-ip
+    commands:
+      - shell: curl https://${ip_type}.icanhazip.com
+    args:
+      - name: ip_type
+        type: string
+        default: ipv4
+
   - name: all-greetings
     commands:
-    - task: greet hello, greetings
-    - shell: echo guten tag, konnitchiwa
-    - task: greet hey, "and hi"
+      - task: greet hello, greetings
+      - shell: echo guten tag, konnitchiwa
+      - task: greet hey, "and hi"
     description: "howdy everyone!"
     args:
 
   - name: example-one-task
     commands:
-    - task: greet hello, greetings
+      - task: greet hello, greetings
+    description: ""
+    args:
+  - name: cd-and-cat
+    commands:
+      - shell: cd src
+      - shell: cat main.rs
     description: ""
     args:
