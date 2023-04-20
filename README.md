@@ -7,23 +7,23 @@ Tasker is a task-runner/cli-as-code tool.
 - ~support letting people have required arguments~
 - ~support globals~
 - ~support self referential commands~
+- ~support dry run~
+- ~convert everything to try get matches~
+- ~runtime/environment contexts~
+- ~improve capturing shell commands to support pipes, &&, etc~
+- add CWD commands
 - support source variables from env variables
+- add error handling configuration (on-fail: do x)
 - support calling tasks from other taskfiles
 - support OS context switching
 - support dependency management wrappers (integrate into poetry, venv)
 - command types to support: shell, task, script,
 - support automatic build commands ex: detect Dockerfile exists, tasker build docker automatically works
-- ~runtime/environment contexts~
 - support tasker as a CLI build tool
     - override tasker name
     - rust library
     - compile yaml and code into dist?
-- add error handling configuration (on-fail: do x)
-- ~dry run support~
-- convert everything to try get matches
-- add CWD commands
 - add validate file command
-- improve capturing shell commands to support pipes, etc
 - support Global taskfile reference (i.e calling tasker from anywhere defaults to one in home)
 - tasker setting file in home
 

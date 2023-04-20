@@ -23,6 +23,7 @@ impl TaskRunner {
         Self { commands }
     }
     pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
+        println!("{:?}", command.get_args());
         let cmd = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -40,7 +41,7 @@ impl TaskRunner {
             if stdout_line.is_some() {
                 match stdout_line.unwrap() {
                     Ok(line) => {
-                        println!("> {}", line);
+                        println!("\x1b[32m>\x1b[0m {}", line);
                     }
                     Err(e) => {
                         println!("Error reading stdout: {}", e);
@@ -52,7 +53,7 @@ impl TaskRunner {
                 if !output.status.success() {
                     match stderr_line.unwrap() {
                         Ok(line) => {
-                            println!("}}> {}", line);
+                            println!("\x1b[31m>\x1b[0m {}", line);
                         }
                         Err(e) => {
                             println!("Error reading stderr: {}", e);
@@ -65,41 +66,20 @@ impl TaskRunner {
 
         Ok(())
     }
-    pub fn parse_command_from_string(command: String) -> Result<Command, ExecutionError> {
-        let mut parts = command.split_whitespace();
-        let command_name = match parts.next() {
-            Some(cmd) => cmd,
-            None => {
-                return Err(ExecutionError::CommandNotFound(ErrWithMessage {
-                    messages: vec![format!(
-                        "command could not be parsed from cmd string: {}",
-                        command
-                    )
-                    .to_string()],
-                    code: "MISSING_CMD".to_string(),
-                }))
-            }
-        };
-        let args = parts;
-
-        let mut cmd = Command::new(command_name);
-        cmd.args(args);
-        Ok(cmd)
-    }
-    fn parse_strings_into_commands(&self) -> Result<Vec<Command>, ExecutionError> {
+    fn parse_strings_into_single_command(&self) -> Command {
         let commands = self.commands.clone();
-        let mut parsed_commands = vec![];
+        let mut base_cmd = Command::new("sh");
+        base_cmd.arg("-c");
+        let mut base_script = String::new();
         for cmd in commands {
-            let parsed_cmd = Self::parse_command_from_string(cmd)?;
-            parsed_commands.push(parsed_cmd);
+            base_script.push_str(&format!("{};\n", cmd));
         }
-        return Ok(parsed_commands);
+        base_cmd.arg(base_script);
+        return base_cmd;
     }
     pub fn execute_tasks(&self) -> Result<(), ExecutionError> {
-        let commands = self.parse_strings_into_commands()?;
-        for cmd in commands {
-            Self::call_command(cmd)?
-        }
+        let command = self.parse_strings_into_single_command();
+        Self::call_command(command)?;
         Ok(())
     }
     pub fn print_commands(&self) {
@@ -323,28 +303,19 @@ impl TaskBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use super::TaskBuilder;
-    use super::TaskRunner;
+    use super::{TaskBuilder, TaskRunner};
     use crate::utils::test_helpers::test_helpers::load_from_string;
     use clap::{value_parser, Arg, Command};
     use std::collections::HashMap;
 
     #[test]
-    fn test_parse_command_from_string() {
-        let cmd = TaskRunner::parse_command_from_string(
-            "echo \"beginning is here\" \"end is here\"".to_string(),
-        );
-        let cmd = cmd.unwrap();
-        assert_eq!(cmd.get_program(), "echo");
-        let args = cmd.get_args();
-        let mut arg_list = vec![];
-        for arg in args {
-            arg_list.push(arg.to_string_lossy().to_string());
-        }
-        assert_eq!(
-            arg_list,
-            vec!["\"beginning", "is", "here\"", "\"end", "is", "here\""]
-        );
+    fn test_parse_strings_into_single_command() {
+        let task = TaskRunner {
+            commands: vec!["echo hello".to_string(), "echo world".to_string()],
+        };
+        let cmd = task.parse_strings_into_single_command();
+        let arg = format!("{:?}", cmd).replace("\"", "");
+        assert_eq!(arg, "sh -c echo hello;\\necho world;\\n");
     }
     #[test]
     fn test_update_variables_from_arg_matches() {

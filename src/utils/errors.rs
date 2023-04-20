@@ -73,7 +73,6 @@ impl From<ExecutionError> for UserFacingError {
                 e.add_to_stack("Command failed to execute".to_string());
                 UserFacingError::TaskExecutionError(e)
             }
-            ExecutionError::CommandNotFound(_) => todo!(),
         }
     }
 }
