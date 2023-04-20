@@ -10,7 +10,7 @@ Tasker is a task-runner/cli-as-code tool.
 - ~support dry run~
 - ~convert everything to try get matches~
 - ~runtime/environment contexts~
-- improve capturing shell commands to support pipes, etc
+- ~improve capturing shell commands to support pipes, &&, etc~
 - add CWD commands
 - support source variables from env variables
 - add error handling configuration (on-fail: do x)
