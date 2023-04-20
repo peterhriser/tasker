@@ -303,11 +303,20 @@ impl TaskBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use super::TaskBuilder;
+    use super::{TaskBuilder, TaskRunner};
     use crate::utils::test_helpers::test_helpers::load_from_string;
     use clap::{value_parser, Arg, Command};
     use std::collections::HashMap;
 
+    #[test]
+    fn test_parse_strings_into_single_command() {
+        let task = TaskRunner {
+            commands: vec!["echo hello".to_string(), "echo world".to_string()],
+        };
+        let cmd = task.parse_strings_into_single_command();
+        let arg = format!("{:?}", cmd).replace("\"", "");
+        assert_eq!(arg, "sh -c echo hello;\\necho world;\\n");
+    }
     #[test]
     fn test_update_variables_from_arg_matches() {
         let mut runner = TaskBuilder::new(load_from_string());

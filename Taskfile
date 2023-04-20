@@ -45,9 +45,6 @@ tasks:
     args:
   - name: cd-and-cat
     commands:
-      - shell: cd src
-      - shell: pwd
-      - shell: cat main.rs
-      # - shell: cat ./main.rs
+      - shell: cd src && cat main.rs | grep main\(\)
     description: ""
     args:
