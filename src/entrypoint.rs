@@ -86,7 +86,10 @@ pub fn handle_result(result: Result<bool, UserFacingError>) {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }
-            UserFacingError::TaskExecutionError(_) => todo!(),
+            UserFacingError::TaskExecutionError(_) => {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
             UserFacingError::MissingArgError(_) => {
                 eprintln!("{}", e);
                 std::process::exit(1);

@@ -3,13 +3,11 @@ use crate::utils::errors::ErrWithMessage;
 #[derive(Debug)]
 pub enum ExecutionError {
     CommandFailed(ErrWithMessage),
-    CommandNotFound(ErrWithMessage),
 }
 impl std::fmt::Display for ExecutionError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             ExecutionError::CommandFailed(e) => write!(f, "Command failed to execute:\n    {}", e),
-            ExecutionError::CommandNotFound(e) => write!(f, "Command not found:\n    {}", e),
         }
     }
 }
