@@ -23,7 +23,6 @@ impl TaskRunner {
         Self { commands }
     }
     pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
-        println!("{:?}", command.get_args());
         let cmd = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
