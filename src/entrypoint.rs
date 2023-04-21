@@ -33,12 +33,26 @@ impl EntryPoint {
     }
     fn get_config_path(&self) -> Result<String, UserFacingError> {
         let config_path = match self.initial_arg_matches.get_one::<PathBuf>("config_path") {
-            Some(fp) if fp.exists() => fp.to_string_lossy().to_string(),
+            Some(fp) if fp.exists() => {
+                let path = fp.to_string_lossy().to_string();
+                shellexpand::tilde(&path).to_string()
+            }
             _ => {
-                return Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
-                    code: "INVALID_TASKFILE_PATH".to_string(),
-                    messages: vec!["Taskfile does not exist".to_string()],
-                }))
+                match self
+                    .initial_arg_matches
+                    .get_one::<PathBuf>("global_config_path")
+                {
+                    Some(gfp) => {
+                        let path = gfp.to_string_lossy().to_string();
+                        shellexpand::tilde(&path).to_string()
+                    }
+                    _ => {
+                        return Err(UserFacingError::TaskfileDoesNotExist(ErrWithMessage {
+                            code: "INVALID_TASKFILE_PATH".to_string(),
+                            messages: vec!["Taskfile does not exist".to_string()],
+                        }))
+                    }
+                }
             }
         };
         Ok(config_path)

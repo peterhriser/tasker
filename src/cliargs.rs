@@ -5,6 +5,8 @@ use std::path::PathBuf;
 pub struct CliArgs {
     #[arg(default_value = "Taskfile", short, long="config", help="path to file with task definitions", value_parser=value_parser!(PathBuf))]
     pub config_path: PathBuf,
+    #[arg(default_value = "~/.tasker/Taskfile", env, long="global-config", help="global tasker definition", value_parser=value_parser!(PathBuf))]
+    pub global_config_path: Option<PathBuf>,
 
     #[arg(
         trailing_var_arg = true,
