@@ -99,11 +99,14 @@ impl CmdArg {
     }
     pub(super) fn get_clap_arg(&self) -> clap::Arg {
         let name_owned = self.name.to_owned();
+        let env_name = format!("TASKER_{}", name_owned.clone().to_uppercase());
         if !self.is_required() {
             let default = self.default.to_owned().unwrap();
-            return clap::Arg::new(name_owned).default_value(default);
+            return clap::Arg::new(&name_owned)
+                .env(env_name)
+                .default_value(default);
         } else {
-            return clap::Arg::new(name_owned).required(true);
+            return clap::Arg::new(&name_owned).env(env_name).required(true);
         }
     }
     pub fn get_name(&self) -> &str {
