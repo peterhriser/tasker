@@ -23,7 +23,6 @@ impl TaskRunner {
         Self { commands }
     }
     pub fn call_command(mut command: Command) -> Result<(), ExecutionError> {
-        println!("{:?}", command.get_args());
         let cmd = command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -130,7 +129,12 @@ impl TaskBuilder {
         let mut local_variable_lookup = self.variable_lookup.clone();
         for id in args.ids() {
             let key = id.to_string();
-            let value = args.get_one::<String>(id.as_str()).unwrap().to_string();
+            let mut value = args.get_one::<String>(id.as_str()).unwrap().to_string();
+            // I kinda hate this but until we get flag based arg, this allows us to skip ordered args
+            if value == "-" {
+                let env_attempt = format!("TASKER_{}", key.to_uppercase());
+                value = std::env::var(env_attempt).unwrap();
+            }
             upsert_into_hash_map(key, value, &mut local_variable_lookup);
         }
         self.variable_lookup = local_variable_lookup;
