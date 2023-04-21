@@ -62,7 +62,7 @@ echo bar
 echo goodbye
 ```
 
-### Argmuent
+### Argmuments
 A task can take arguments. You can take arguments and insert them into commands.
 
 Arguments are defined in the `args` stanza. An arg has a name, a type, optionally a description, and optionally a default value.
