@@ -103,7 +103,6 @@ You can ommit a variable from CLI Input by adding `-`.
 - ~convert everything to try get matches~
 - ~runtime/environment contexts~
 - ~improve capturing shell commands to support pipes, &&, etc~
-- add CWD commands
 - ~support source variables from env variables~
 - add error handling configuration (on-fail: do x)
 - support calling tasks from other taskfiles
