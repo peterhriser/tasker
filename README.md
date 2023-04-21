@@ -91,7 +91,7 @@ tasker greet Peter
 TASKER_FIRST_NAME=Peter tasker greet
 ```
 
-You can ommit a variable from CLI Input with a `--`.
+You can ommit a variable from CLI Input by adding `-`.
 
 # Planned Features
 - ~support inserting variables into commands~
